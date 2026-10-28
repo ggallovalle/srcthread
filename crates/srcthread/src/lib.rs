@@ -4,6 +4,7 @@
 //! nvim, and Android call this in-process.
 
 mod error;
+pub mod ids;
 pub mod lint;
 pub mod markdown;
 pub mod schema;
@@ -14,10 +15,11 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub use error::{Error, Result};
+pub use ids::{new_entity_id, short_ulid_suffix, slugify};
 pub use lint::{LintDiagnostic, lint_store};
 pub use markdown::{Fence, extract_fences, split_toml_frontmatter};
 pub use store::{
-    DiskStore, LoadedAnchor, LoadedExcerpt, LoadedRef, LoadedThread, load_thread_dir,
+    DiskStore, LoadedAnchor, LoadedExcerpt, LoadedRef, LoadedThread, init_store, load_thread_dir,
     resolve_store_root,
 };
 pub use types::*;
@@ -150,7 +152,7 @@ impl Srcthread {
         }
     }
 
-    /// Create a research thread id (memory only for now).
+    /// Create a research thread. Memory: push id. Disk: write `threads/<id>/`.
     pub fn create_thread(&self, id: impl Into<String>) -> Result<()> {
         let id = id.into();
         if id.trim().is_empty() {
@@ -165,9 +167,38 @@ impl Srcthread {
                 store.threads.push(id);
                 Ok(())
             }
-            Backend::Disk(_) => Err(Error::Toml(
-                "create_thread on disk not implemented yet".into(),
-            )),
+            Backend::Disk(d) => {
+                d.create_thread_with_meta(ThreadMeta {
+                    id: id.clone(),
+                    title: id,
+                    tags: Vec::new(),
+                    created: String::new(),
+                    updated: String::new(),
+                })?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Disk: slugify `title` + ULID suffix and write thread tree. Memory: same id push.
+    pub fn create_thread_from_title(&self, title: &str) -> Result<ThreadMeta> {
+        match &*self.backend {
+            Backend::Disk(d) => d.create_thread_from_title(title),
+            Backend::Memory(m) => {
+                let id = new_entity_id(title);
+                let mut store = m.lock().expect("store lock");
+                if store.threads.iter().any(|t| t == &id) {
+                    return Err(Error::ThreadExists(id));
+                }
+                store.threads.push(id.clone());
+                Ok(ThreadMeta {
+                    id: id.clone(),
+                    title: title.to_string(),
+                    tags: Vec::new(),
+                    created: String::new(),
+                    updated: String::new(),
+                })
+            }
         }
     }
 }

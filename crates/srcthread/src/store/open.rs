@@ -10,8 +10,8 @@ use crate::types::{StoreConfig, ThreadMeta};
 /// On-disk store handle (config loaded; threads cold-walked on demand).
 #[derive(Debug, Clone)]
 pub struct DiskStore {
-    root: PathBuf,
-    config: StoreConfig,
+    pub(crate) root: PathBuf,
+    pub(crate) config: StoreConfig,
 }
 
 impl DiskStore {
