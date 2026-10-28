@@ -2998,6 +2998,7 @@ name = "srcthread-uniffi"
 version = "0.1.0"
 dependencies = [
  "srcthread",
+ "thiserror 2.0.21",
  "uniffi",
 ]
 
