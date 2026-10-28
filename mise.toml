@@ -60,6 +60,11 @@ run = "hk run pre-commit"
 # `render:usage` is a file task: mise/tasks/render/usage
 # (hk `render_usage` pre-commit step calls `mise run render:usage`).
 
+[tasks."render:schema"]
+description = "Regenerate schema/*.json from schemars types"
+dir = "{{config_root}}"
+run = "cargo run -qp srcthread --example render_schemas"
+
 [tasks.detekt]
 description = "Run Android detekt (ktlint wrapper) via Gradle"
 dir = "{{config_root}}"

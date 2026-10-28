@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnchorMeta",
+  "description": "Typed anchor fields (same schema for `.toml` and markdown frontmatter).",
+  "type": "object",
+  "properties": {
+    "end_line": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "line": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "mirror": {
+      "description": "Id into `[mirrors]` in store config.",
+      "type": "string"
+    },
+    "path": {
+      "description": "Path inside the mirrored repo.",
+      "type": "string"
+    },
+    "sha": {
+      "description": "Pinned commit SHA.",
+      "type": "string"
+    },
+    "symbol": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "mirror",
+    "sha",
+    "path"
+  ]
+}
