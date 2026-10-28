@@ -1,12 +1,11 @@
 //! CLI surface shaped like mise + herdr: one module per top-level command,
 //! nested groups as directories, global flags on the root `Cli`, and a
-//! **single distributable binary** that also runs the daemon and desktop UI.
+//! **single distributable binary** that also runs the desktop UI and MCP.
 //!
-//! See `research/07-mise-cli-structure.md` and
-//! `research/08-herdr-single-binary.md`.
+//! See `research/07-mise-cli-structure.md`,
+//! `research/08-herdr-single-binary.md`, and `research/09-no-daemon.md`.
 
 mod anchor;
-mod daemon;
 mod desktop;
 mod doctor;
 mod excerpt;
@@ -26,8 +25,8 @@ use usage_rs::{Cli, Subcommands};
 /// Local-first research threads over pinned source mirrors.
 ///
 /// Declare stores, pin source mirrors, and keep research threads with
-/// anchors and offline excerpts. The same binary runs the socket daemon
-/// (`srcthread daemon`) and the rune desktop UI (`srcthread desktop`).
+/// anchors and offline excerpts. The same binary runs the rune desktop UI
+/// (`srcthread desktop`) and the MCP server (`srcthread mcp`).
 #[derive(Cli)]
 #[usage(bin = "srcthread", version = env!("CARGO_PKG_VERSION"), verbatim_doc_comment)]
 pub(crate) struct SrcthreadCli {
@@ -58,9 +57,6 @@ pub(crate) struct SrcthreadCli {
 #[derive(Subcommands)]
 #[usage(run)]
 pub(crate) enum Commands {
-    /// Run or control the local socket daemon
-    #[usage(visible_alias = "d")]
-    Daemon(daemon::Daemon),
     /// Open the rune desktop UI
     Desktop(desktop::Desktop),
     /// Manage file-canonical research stores (git vaults)
@@ -85,9 +81,9 @@ pub(crate) enum Commands {
     Mcp(mcp::Mcp),
     /// Manage built-in agent MCP integrations
     Integration(integration::Integration),
-    /// Environment / daemon / store health checks
+    /// Environment / store health checks
     #[usage(visible_alias = "dr")]
     Doctor(doctor::Doctor),
-    /// Hello-world: daemon socket if up, else in-process lib
+    /// Hello-world: in-process lib greeting
     Hello(hello::Hello),
 }

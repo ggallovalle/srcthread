@@ -1,22 +1,15 @@
 # Plan: Neovim plugin
 
-fff-inspired UX: fast pickers over a warm daemon, open files at the pinned
-line without re-indexing the world on every keystroke.
+fff-inspired UX: fast pickers over store contents, open files at the pinned
+anchor location.
 
-## Goals
+## Hello-world
 
-- Pick a **thread**, then an **anchor** (or search across open store).
-- **Open at line** — `edit` + cursor (already stubbed as `open_anchor`).
-- Talk to `srcthread daemon` over the socket (fallback: in-process later if needed).
+- `:SrcthreadHello` / Threads / ThreadNew via thin Lua over the `srcthread`
+  CLI (in-process lib under the hood).
 
-## Commands (planned)
+## Later
 
-- `:SrcthreadHello` — smoke notify
-- `:SrcthreadThreads` — picker of threads
-- `:SrcthreadAnchors` — anchors in current / selected thread
-- `:SrcthreadOpen` — resolve selection to path@line
-
-## Non-goals early
-
-- Reimplement fff's full content index inside Lua
-- Shipping a separate binary from the plugin tree
+- Pick thread / pick anchor; open mirror path at line.
+- Optional in-process warm index later (fff-shaped inside a long-lived host);
+  not a PC daemon socket.

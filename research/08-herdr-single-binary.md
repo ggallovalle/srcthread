@@ -1,7 +1,9 @@
 # herdr: one distributable binary
 
 How [herdr](https://github.com/herdrdev/herdr) ships so a single CLI
-suffices — the pattern srcthread should follow for PC distribution.
+suffices — the packaging pattern srcthread still follows for PC distribution
+(**without** copying herdr’s required socket server; see
+[09-no-daemon.md](09-no-daemon.md)).
 
 ## What herdr does
 
@@ -21,13 +23,13 @@ package binary, no second `[[bin]]` for the server).
 | Surface | Distributable shape |
 | --- | --- |
 | Engine | `srcthread` lib crate |
-| Daemon | `srcthread-daemon` **library**; entered via `srcthread daemon` |
-| Desktop | `srcthread-desktop` **library**; entered via `srcthread desktop` |
-| MCP | library stub; entered via `srcthread mcp` |
+| Desktop | desktop **library**; entered via `srcthread desktop` |
+| MCP | library; entered via `srcthread mcp` |
 | CLI | **only** user-facing binary: `srcthread` |
 
-The product name stays **`srcthread`** — never a trailing-`d` daemon binary
-(`srcthreadd` and friends are wrong).
+We take the **one product binary** lesson, not the **mandatory server**
+lesson. Do not add a trailing-`d` daemon binary or a `srcthread daemon`
+subcommand for v1.
 
 Android stays a separate APK (UniFFI embed) — outside the PC single-binary
 story.

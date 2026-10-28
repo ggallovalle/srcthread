@@ -4,8 +4,7 @@
 
 - `apps/desktop` — GPU UI on Wayland/Arch first; **library**, not a binary.
 - Launch: `srcthread desktop` (CLI feature `desktop`, on by default locally).
-- In-process or socket client to the same engine; prefer socket so it shares
-  the warm daemon with CLI/nvim.
+- Embed the `srcthread` lib in-process (no PC daemon).
 - First screens: hello → thread list → thread detail → open anchor in editor.
 
 ## Android (Kotlin Compose + UniFFI)

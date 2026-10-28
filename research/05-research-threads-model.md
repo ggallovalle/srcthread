@@ -1,6 +1,7 @@
 # Research-threads model (settled)
 
-Design decisions from grilling. Name: **srcthread**.
+Design decisions from grilling. Name: **srcthread**. Glossary:
+[`CONTEXT.md`](../CONTEXT.md). Strap: [`PLAN.md`](../PLAN.md).
 
 ## Primary object
 
@@ -22,27 +23,30 @@ repos at pinned SHAs. Fresh fetch can need network.
 ## Store and sync
 
 - **File-canonical git store** (Obsidian-vault shaped): mergeable on disk.
-- **Optional derived index** (RAM in daemon; SQLite only if needed later) —
-  never the merge source of truth. See [01-fff-index.md](01-fff-index.md).
+  Intended to nest in normal project repos via an owned folder marker
+  (mise-shaped; exact layout still open).
+- **Optional derived index** (in-process in long-lived hosts; SQLite only if
+  needed later) — never the merge source of truth. See
+  [01-fff-index.md](01-fff-index.md), [09-no-daemon.md](09-no-daemon.md).
 - **Multi-store**: many independent store directories.
+- **Mirrors**: `$XDG_CACHE_HOME/srcthread/mirrors/…`, overridable via env
+  (not store config).
 - Sync: **git** when remote/not nearby; **Localsend-like peer** for explicit
   nearby transfer of a store or selected threads. See
   [03-localsend.md](03-localsend.md).
 
 ## Process model
 
-PC: **daemon + NDJSON socket** owns open stores and warm index
-([02-herdr-socket.md](02-herdr-socket.md)). Android embeds the Rust lib
-(UniFFI) without requiring the daemon.
+PC: **no required daemon**. Every surface embeds the lib in-process
+([09-no-daemon.md](09-no-daemon.md)). Android already embeds via UniFFI.
 
 ## Build order
 
 1. lib (`srcthread`)
-2. daemon + socket (`srcthread daemon`)
-3. CLI
-4. nvim
-5. desktop (rune)
-6. Android (Kotlin + Gradle + UniFFI)
-7. MCP (last)
+2. CLI
+3. nvim
+4. desktop (rune)
+5. Android (Kotlin + Gradle + UniFFI)
+6. MCP (last)
 
 Personal-first; greenfield (not journal / journalit / ghq).

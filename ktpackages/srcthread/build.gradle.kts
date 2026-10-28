@@ -47,7 +47,6 @@ detekt {
         files(
             "src/main/java/dev/kbroom/srcthread/SrcThread.kt",
             "src/main/java/dev/kbroom/srcthread/SrcThreadFfi.kt",
-            "src/main/java/dev/kbroom/srcthread/rememberSrcThread.kt",
         ),
     )
 }

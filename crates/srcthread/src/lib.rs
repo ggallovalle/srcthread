@@ -1,8 +1,8 @@
 //! srcthread engine library.
 //!
 //! This crate is the only source-of-truth engine for the project.
-//! The daemon, CLI, MCP server, and desktop UI all call into this library;
-//! they do not own persistence or domain logic themselves.
+//! The CLI, MCP server, desktop UI, nvim, and Android bindings all call into
+//! this library in-process; they do not own persistence or domain logic.
 //!
 //! Hello-world builds expose an in-memory [`Srcthread`] / [`Store`] facade
 //! with at least one **query** ([`Srcthread::list_threads`]) and one

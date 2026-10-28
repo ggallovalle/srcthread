@@ -21,7 +21,7 @@ web-fetching GitHub:
 
 - `get_thread` / `list_anchors` / `resolve_anchor`
 - `get_excerpt` / `get_note` / `list_refs`
-- optional `search` against the daemon index
+- optional `search` against an in-process index in the MCP process
 
-Prefer attaching to `srcthread daemon` (same NDJSON) so MCP shares the warm
-index with nvim/CLI. Standalone embed of the lib remains the hello-world path.
+Embed the `srcthread` lib in the MCP stdio process (fff-shaped warm host).
+No PC daemon socket.

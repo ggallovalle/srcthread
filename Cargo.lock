@@ -3005,22 +3005,11 @@ dependencies = [
  "serde",
  "serde_json",
  "srcthread",
- "srcthread-daemon",
  "srcthread-desktop",
  "srcthread-mcp",
  "tempfile",
  "toml_edit 0.22.27",
  "usage-rs",
-]
-
-[[package]]
-name = "srcthread-daemon"
-version = "0.2.0"
-dependencies = [
- "serde",
- "serde_json",
- "srcthread",
- "tokio",
 ]
 
 [[package]]

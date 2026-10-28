@@ -90,8 +90,8 @@ pub struct Cache {
 | mise | srcthread analogue |
 | --- | --- |
 | Flat top-level verbs users type daily | Prefer `srcthread ls` / `new` over deep nests when common |
-| Groups for resource areas (`cache`, `sync`) | `store`, `daemon`, `sync`, `mirror` as groups |
-| Aliases | `thread list` → `ls`, `doctor` → `dr`, `daemon` → `d` |
+| Groups for resource areas (`cache`, `sync`) | `store`, `sync`, `mirror` as groups |
+| Aliases | `thread list` → `ls`, `doctor` → `dr` |
 | Global `-C` / quiet / yes | Global `--store` / `-C`, `-q`, `-v`, `-y` |
 | Bare group does something sensible | `srcthread store` → print active store path |
 | usage-rs | Already our stack (not clap) |
@@ -103,7 +103,6 @@ crates/srcthread-cli/src/cli/
   mod.rs                 # Cli + Commands + globals
   hello.rs
   doctor.rs
-  daemon/{mod,start,stop,status}.rs
   store/{mod,init,list,use_cmd,path}.rs
   thread/{mod,list,show,new,edit,rm}.rs
   anchor/{mod,add,list,show,open}.rs
@@ -117,8 +116,8 @@ crates/srcthread-cli/src/cli/
     peer/{mod,discover,send,receive}.rs
 ```
 
-Keep implementing leaves as stubs until the lib/daemon catch up; the
-**shape** of the tree matters more than filling every body.
+Keep implementing leaves as stubs until the lib catches up; the **shape**
+of the tree matters more than filling every body.
 
 [gh-cli]: https://github.com/jdx/mise/tree/main/src/cli
 [arch]: https://mise.jdx.dev/architecture.html

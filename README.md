@@ -1,7 +1,9 @@
 # srcthread
 
-Personal research-thread tool. Local-first: file-canonical stores, a warm PC
-daemon, thin clients (CLI, nvim, desktop, Android, MCP).
+Personal research-thread tool. Local-first: file-canonical stores, shared
+source mirrors, thin clients (CLI, nvim, desktop, Android, MCP) that embed the
+engine lib in-process. No PC daemon — see
+[`research/09-no-daemon.md`](research/09-no-daemon.md).
 
 Private personal project for now.
 
@@ -10,7 +12,6 @@ Private personal project for now.
 | Name | Path | Description |
 | --- | --- | --- |
 | `srcthread` | [`crates/srcthread`](crates/srcthread) | Engine lib (store + facade) |
-| `srcthread-daemon` | [`crates/srcthread-daemon`](crates/srcthread-daemon) | Socket daemon **library** |
 | `srcthread-cli` | [`crates/srcthread-cli`](crates/srcthread-cli) | **Sole PC binary** `srcthread` |
 | `srcthread-mcp` | [`crates/srcthread-mcp`](crates/srcthread-mcp) | MCP **library** (via `srcthread mcp`) |
 | desktop | [`apps/desktop`](apps/desktop) | Rune UI **library** (`srcthread desktop`) |
@@ -18,8 +19,8 @@ Private personal project for now.
 | `srcthread` (kt) | [`ktpackages/srcthread`](ktpackages/srcthread) | Compose `SrcThread` + UniFFI |
 | nvim | [`nvim`](nvim) | Neovim plugin |
 
-PC distribution follows herdr: one binary covers CLI, daemon, and desktop
-(`research/08-herdr-single-binary.md`).
+PC distribution follows herdr’s single-binary idea for CLI + desktop + MCP
+(`research/08-herdr-single-binary.md`), without a socket daemon.
 
 ## Quick start
 
@@ -27,7 +28,6 @@ PC distribution follows herdr: one binary covers CLI, daemon, and desktop
 mise install
 mise run check
 cargo run -p srcthread-cli -- hello
-cargo run -p srcthread-cli -- daemon status
 cargo run -p srcthread-cli -- desktop   # needs Wayland/GPU; default feature
 ```
 
@@ -69,8 +69,10 @@ workflow is checked in but deactivated.
 
 ## Docs
 
+- [CONTEXT.md](CONTEXT.md) — glossary (thread, anchor, excerpt, …)
+- [PLAN.md](PLAN.md) — product strap + build order
 - [research/](research/) — notes behind decisions
-- [plans/](plans/) — roadmap and surface sketches
+- [plans/](plans/) — phased roadmap and surface sketches
 
 ## License
 

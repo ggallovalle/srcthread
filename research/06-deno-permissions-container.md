@@ -2,7 +2,7 @@
 
 How Deno packages permission **state**, a **clonable handle**, and an
 abstract **prompt / policy** path — relevant for srcthread hosts (CLI,
-daemon, Android UniFFI, tests).
+desktop, Android UniFFI, MCP, tests).
 
 Pinned crate version for this note:
 [`deno_permissions` 0.119.0](https://crates.io/crates/deno_permissions/0.119.0)
@@ -174,24 +174,21 @@ file so grants/revokes do not leak across files. See
 ## Implications for srcthread
 
 srcthread needs capability checks (store paths, network peers, maybe
-shell-outs) with backends: CLI prompt, Android UI, daemon policy,
-allow-all tests. Deno’s split is useful; copy the **shape**, not the
-global prompt.
+shell-outs) with backends: CLI prompt, Android UI, allow-all tests.
+Deno’s split is useful; copy the **shape**, not the global prompt.
+(No PC daemon — [09-no-daemon.md](09-no-daemon.md).)
 
 - **`Permissions` state** — Keep grant/deny tables as plain owned data.
 - **`PermissionsContainer`** — Expose a `Clone` handle:
-  `Arc<Mutex<State>>` (or `Arc<RwLock<…>>`) so CLI, daemon workers, and
-  UniFFI can share without deep-copying.
+  `Arc<Mutex<State>>` (or `Arc<RwLock<…>>`) so CLI workers and UniFFI can
+  share without deep-copying.
 - **`deep_clone` / child perms** — Use when a worker/session must not
   observe later parent grants, or must not escalate.
 - **`PermissionDescriptorParser`** — Optional: only if you normalize
   path/net descriptors offline from FS.
 - **Global `PermissionPrompter`** — **Avoid process-global** if Android
-  UniFFI and a daemon coexist in one process or tests run in parallel.
+  UniFFI and other hosts share a process or tests run in parallel.
   Prefer `Arc<dyn Prompt>` (or policy trait) **on the container**.
-- **Permission broker** — Closest analogue to **daemon policy**: policy
-  answers allow/deny over the NDJSON socket; CLI/Android are prompt
-  UIs.
 - **allow-all / none_without_prompt** — First-class constructors for
   unit tests and headless CI.
 
@@ -201,12 +198,10 @@ Suggested srcthread layering:
 CapabilityState          // grants / denies / prompt-enabled flags
      ↑ Mutex
 CapabilityHandle (Clone) // Arc; what APIs take
-     + Arc<dyn Decider> // Prompt UI | DaemonPolicy | AllowAll | DenyAll
+     + Arc<dyn Decider> // Prompt UI | AllowAll | DenyAll | …
 ```
 
 - **CLI**: `Decider` reads stdin or a dialog.
-- **`srcthread daemon`**: `Decider` is “ask configured policy / always allow
-  known store roots”; thin clients do not re-prompt for every attach.
 - **Android UniFFI**: `Decider` callbacks into Kotlin UI; same Rust
   handle type as desktop.
 - **Tests**: inject `AllowAll` / `DenyAll` deciders; never touch a TTY.
