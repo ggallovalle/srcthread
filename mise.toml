@@ -65,6 +65,11 @@ description = "Regenerate schema/*.json from schemars types"
 dir = "{{config_root}}"
 run = "cargo run -qp srcthread --example render_schemas"
 
+[tasks."lint-seed"]
+description = "Lint the in-repo srcthread/ dogfood store"
+dir = "{{config_root}}"
+run = "cargo run -qp srcthread-cli --no-default-features -- lint"
+
 [tasks.detekt]
 description = "Run Android detekt (ktlint wrapper) via Gradle"
 dir = "{{config_root}}"

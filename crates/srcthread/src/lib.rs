@@ -4,6 +4,7 @@
 //! nvim, and Android call this in-process.
 
 mod error;
+pub mod lint;
 pub mod markdown;
 pub mod schema;
 mod store;
@@ -13,6 +14,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub use error::{Error, Result};
+pub use lint::{LintDiagnostic, lint_store};
 pub use markdown::{Fence, extract_fences, split_toml_frontmatter};
 pub use store::{
     DiskStore, LoadedAnchor, LoadedExcerpt, LoadedRef, LoadedThread, load_thread_dir,

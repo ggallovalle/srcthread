@@ -309,6 +309,16 @@ cmd doctor help="Environment / daemon / store health checks" {
     alias dr
     flag "-h --help" help="Print help" action=help builtin=#true
 }
-cmd hello help="Hello-world: daemon socket if up, else in-process lib" {
+cmd lint help="Lint the active store (structural checks)" {
+    long_help #"""
+Lint the active store (structural checks)
+
+Everyday commands stay lenient; use this for a strict pass. `--fix` is
+reserved for safe autofixes (not implemented yet).
+"""#
+    flag --fix help="Apply safe autofixes (stub)"
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
+cmd hello help="Hello-world: in-process lib greeting" {
     flag "-h --help" help="Print help" action=help builtin=#true
 }

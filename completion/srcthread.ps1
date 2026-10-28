@@ -14,14 +14,14 @@ Register-ArgumentCompleter -Native -CommandName 'srcthread' -ScriptBlock {
 
     'name srcthread
 bin srcthread
-version "0.2.0"
+version "0.1.0"
 about "Local-first research threads over pinned source mirrors."
 long_about #"""
 Local-first research threads over pinned source mirrors.
 
 Declare stores, pin source mirrors, and keep research threads with
-anchors and offline excerpts. The same binary runs the socket daemon
-(`srcthread daemon`) and the rune desktop UI (`srcthread desktop`).
+anchors and offline excerpts. The same binary runs the rune desktop UI
+(`srcthread desktop`) and the MCP server (`srcthread mcp`).
 """#
 subcommand_required #true
 flag "-C --cd" help="Change to DIR before running (and prefer its store, later)" global=#true {
@@ -35,46 +35,8 @@ flag "-v --verbose" help="Extra output (-vv for more)" var=#true global=#true co
 flag "-y --yes" help="Answer yes to confirmation prompts" global=#true
 flag "-h --help" help="Print help" action=help builtin=#true
 flag "-V --version" help="Print version" action=version builtin=#true
-cmd daemon help="Run or control the local socket daemon" {
-    alias d
-    long_help #"""
-Run or control the local socket daemon
-
-With no subcommand, runs the daemon in the foreground (herdr-style:
-`srcthread daemon` *is* the server process). Use `stop` / `status` against
-a running instance.
-"""#
-    flag --socket help="Unix socket path (default: `$XDG_RUNTIME_DIR/srcthread.sock`)" global=#true {
-        arg <PATH>
-    }
-    flag "-h --help" help="Print help" action=help builtin=#true
-    cmd stop help="Stop a running daemon via the socket" {
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
-    cmd status help="Show daemon reachability and socket path" {
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
-}
 cmd desktop help="Open the rune desktop UI" {
-    long_help #"""
-Open the rune desktop UI
-
-With no subcommand, launches the desktop. Use `install-xdg` /
-`uninstall-xdg` / `xdg-status` for FreeDesktop launcher and icons.
-"""#
     flag "-h --help" help="Print help" action=help builtin=#true
-    cmd install-xdg help="Install FreeDesktop .desktop entry and icon" {
-        flag --dev help="Install the ship-badged -dev launcher (workspace / shellrc)"
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
-    cmd uninstall-xdg help="Remove FreeDesktop .desktop entry and icon" {
-        flag --dev help="Remove the ship-badged -dev launcher"
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
-    cmd xdg-status help="Show FreeDesktop install status" {
-        flag --dev help="Check the ship-badged -dev launcher"
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
 }
 cmd store help="Manage file-canonical research stores (git vaults)" {
     long_help #"""
@@ -285,45 +247,21 @@ With no subcommand, shows git status (stub).
 cmd mcp help="Run the MCP stdio server (stub)" {
     flag "-h --help" help="Print help" action=help builtin=#true
 }
-cmd integration subcommand_required=#true help="Manage built-in agent MCP integrations" {
-    long_help #"""
-Manage built-in agent MCP integrations
-
-Install, uninstall, or show status for registering `srcthread mcp` in
-coding-agent configs (Cursor, Claude, OpenCode, Codex).
-"""#
-    flag "-h --help" help="Print help" action=help builtin=#true
-    cmd install help="Install an MCP integration" {
-        flag --user help="Write into the user/home agent config"
-        flag --local help="Write into the project (cwd) agent config"
-        flag "-h --help" help="Print help" action=help builtin=#true
-        arg <TARGET> help="Agent target: cursor, claude, opencode, or codex"
-        group scope "--user" "--local" required=#true
-    }
-    cmd uninstall help="Uninstall an MCP integration" {
-        flag --user help="Write into the user/home agent config"
-        flag --local help="Write into the project (cwd) agent config"
-        flag "-h --help" help="Print help" action=help builtin=#true
-        arg <TARGET> help="Agent target: cursor, claude, opencode, or codex"
-        group scope "--user" "--local" required=#true
-    }
-    cmd status help="Show integration status" {
-        long_help #"""
-Show MCP integration status
-
-With no scope flag, prints both user and local for every target.
-"""#
-        flag --user help="Write into the user/home agent config"
-        flag --local help="Write into the project (cwd) agent config"
-        flag "-h --help" help="Print help" action=help builtin=#true
-        group scope "--user" "--local"
-    }
-}
-cmd doctor help="Environment / daemon / store health checks" {
+cmd doctor help="Environment / store health checks" {
     alias dr
     flag "-h --help" help="Print help" action=help builtin=#true
 }
-cmd hello help="Hello-world: daemon socket if up, else in-process lib" {
+cmd lint help="Lint the active store (structural checks)" {
+    long_help #"""
+Lint the active store (structural checks)
+
+Everyday commands stay lenient; use this for a strict pass. `--fix` is
+reserved for safe autofixes (not implemented yet).
+"""#
+    flag --fix help="Apply safe autofixes (stub)"
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
+cmd hello help="Hello-world: in-process lib greeting" {
     flag "-h --help" help="Print help" action=help builtin=#true
 }
 ' | Out-File -FilePath $specFile -Encoding utf8

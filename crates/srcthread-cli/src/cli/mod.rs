@@ -13,6 +13,7 @@ mod doctor;
 mod excerpt;
 mod hello;
 mod integration;
+mod lint;
 mod mcp;
 mod mirror;
 mod r#ref;
@@ -88,6 +89,8 @@ pub(crate) enum Commands {
     /// Environment / store health checks
     #[usage(visible_alias = "dr")]
     Doctor(doctor::Doctor),
+    /// Lint the active store (structural checks)
+    Lint(lint::Lint),
     /// Hello-world: in-process lib greeting
     Hello(hello::Hello),
 }
