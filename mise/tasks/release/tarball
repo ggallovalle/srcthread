@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Build a platform tarball for srcthread (mise-shaped layout).
+#MISE description="Build a platform tarball (mise-shaped layout)"
+#USAGE arg "[triple]" help="Rust target triple (default: host)"
+#USAGE arg "[variant]" help="Packslip variant" default="default" {
+#USAGE   choices "default" "desktop"
+#USAGE }
 #
-# Usage:
-#   scripts/build-tarball.sh [rust-triple] [variant]
-#
-# variant: default | desktop  (default: default)
 # Output under dist/:
 #   srcthread-$VER-$os-$arch.tar.gz
 #   srcthread-$VER-$os-$arch-desktop.tar.gz  (when variant=desktop)
@@ -13,8 +13,8 @@ set -euo pipefail
 ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
 cd "$ROOT"
 
-RUST_TRIPLE="${1:-$(rustc -vV | awk '/^host:/{print $2}')}"
-VARIANT="${2:-default}"
+RUST_TRIPLE="${usage_triple:-$(rustc -vV | awk '/^host:/{print $2}')}"
+VARIANT="${usage_variant:-default}"
 
 get_os() {
 	case "$RUST_TRIPLE" in
@@ -66,7 +66,7 @@ cargo build -p srcthread-cli --release --target "$RUST_TRIPLE" "${cargo_args[@]}
 # Ensure man page exists (from usage spec).
 mkdir -p man/man1
 if [[ ! -f man/man1/srcthread.1 ]]; then
-	./scripts/release-assets.sh
+	mise run render:usage
 fi
 
 stage="dist/stage-$basename"

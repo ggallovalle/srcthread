@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Cut a GitHub release manually: PC tarballs (+ optional desktop variant),
-# usage/completions assets, Android APK, and checksums — then dispatch
-# keyless packslip signing (`.github/workflows/packslip-sign.yml`).
-#
-# Usage:
-#   scripts/publish-release.sh <version> [--dry-run] [--skip-android] [--skip-desktop] [--host-only]
+#MISE description="Cut a GitHub release (tarballs, APK, checksums, packslip-sign)"
+#USAGE arg "<version>" help="Semver to publish (must match Cargo.toml)"
+#USAGE flag "--dry-run" help="Build artifacts only; no tag, gh release, or packslip"
+#USAGE flag "--skip-android" help="Skip Android APK"
+#USAGE flag "--skip-desktop" help="Skip desktop variant tarball"
+#USAGE flag "--host-only" help="Only build the current rustc host triple"
 #
 # Env:
 #   HOST_TRIPLE    Override rustc host triple for --host-only builds.
@@ -13,43 +13,16 @@ set -euo pipefail
 ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
 cd "$ROOT"
 
-VERSION=""
+VERSION="${usage_version?}"
 DRY_RUN=0
 SKIP_ANDROID=0
 SKIP_DESKTOP=0
 HOST_ONLY=0
+[[ "${usage_dry_run:-false}" == "true" ]] && DRY_RUN=1
+[[ "${usage_skip_android:-false}" == "true" ]] && SKIP_ANDROID=1
+[[ "${usage_skip_desktop:-false}" == "true" ]] && SKIP_DESKTOP=1
+[[ "${usage_host_only:-false}" == "true" ]] && HOST_ONLY=1
 
-usage() {
-	sed -n '2,16p' "$0" | sed 's/^# \?//'
-	exit "${1:-0}"
-}
-
-while [[ $# -gt 0 ]]; do
-	case "$1" in
-	-h | --help) usage 0 ;;
-	--dry-run) DRY_RUN=1 ;;
-	--skip-android) SKIP_ANDROID=1 ;;
-	--skip-desktop) SKIP_DESKTOP=1 ;;
-	--host-only) HOST_ONLY=1 ;;
-	-*)
-		echo "unknown flag: $1" >&2
-		usage 1
-		;;
-	*)
-		if [[ -n "$VERSION" ]]; then
-			echo "unexpected argument: $1" >&2
-			usage 1
-		fi
-		VERSION="$1"
-		;;
-	esac
-	shift
-done
-
-if [[ -z "$VERSION" ]]; then
-	echo "version required (e.g. 0.1.0)" >&2
-	usage 1
-fi
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
 	echo "version must look like semver (got: $VERSION)" >&2
 	exit 1
@@ -87,7 +60,7 @@ pkg_version="$(cargo metadata --no-deps --format-version 1 |
 	python3 -c "import json,sys; d=json.load(sys.stdin); print([p['version'] for p in d['packages'] if p['name']=='srcthread-cli'][0])")"
 if [[ "$pkg_version" != "$VERSION" ]]; then
 	echo "Cargo.toml version is $pkg_version but publish asked for $VERSION" >&2
-	echo "bump with scripts/bump-version.py first" >&2
+	echo "bump with: mise run release:bump <version>" >&2
 	exit 1
 fi
 
@@ -95,11 +68,11 @@ rm -rf dist
 mkdir -p dist
 
 echo "==> release assets (usage, completions, man)"
-DIST=1 ./scripts/release-assets.sh
+mise run render:usage --dist
 
 build_one() {
 	local triple="$1" variant="$2"
-	./scripts/build-tarball.sh "$triple" "$variant"
+	mise run release:tarball "$triple" "$variant"
 }
 
 if [[ "$HOST_ONLY" -eq 1 ]]; then
@@ -163,7 +136,7 @@ if [[ "$SKIP_ANDROID" -eq 0 ]]; then
 	fi
 fi
 
-./scripts/checksums.sh
+mise run release:checksums
 
 # Never ship a key-signed packslip from this script — mise consumers of a
 # github.com project expect keyless OIDC. Sign after the release exists:

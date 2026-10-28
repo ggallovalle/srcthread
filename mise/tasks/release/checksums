@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-# Write SHASUMS256.txt for staged release artifacts under dist/.
-#
-# Usage:
-#   scripts/checksums.sh [dist-dir]
+#MISE description="Write SHASUMS256.txt for staged release artifacts"
+#USAGE arg "[dist-dir]" help="Directory of release artifacts (default: dist/)"
 set -euo pipefail
 
 ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
-DIST="${1:-$ROOT/dist}"
+DIST="${usage_dist_dir:-$ROOT/dist}"
 
 if [[ ! -d "$DIST" ]]; then
 	echo "dist directory not found: $DIST" >&2

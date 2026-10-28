@@ -1,7 +1,7 @@
 # Releasing srcthread
 
-Releases are cut with `scripts/publish-release.sh` on a clean `main`
-checkout. That script builds/uploads assets, then dispatches
+Releases are cut with `mise run release:publish` on a clean `main`
+checkout. That task builds/uploads assets, then dispatches
 [`.github/workflows/packslip-sign.yml`](.github/workflows/packslip-sign.yml)
 for keyless packslip (no `pubkey` for mise). The full
 [`.github/workflows/release.yml`](.github/workflows/release.yml) matrix
@@ -25,7 +25,7 @@ Rust crates share `[workspace.package] version`; Android `versionName` /
 `versionCode` stay in lockstep via:
 
 ```sh
-scripts/bump-version.py 0.1.1          # or: patch | minor | major
+mise run release:bump 0.1.1          # or: patch | minor | major
 ```
 
 Write GitHub release notes at `release-notes/<version>.md` (required;
@@ -48,7 +48,7 @@ Builds assets under `dist/` only — no tag, no `gh release`, no packslip.
 
 ```sh
 git checkout main && git pull
-scripts/publish-release.sh 0.1.0 --dry-run --host-only
+mise run release:publish 0.1.0 --dry-run --host-only
 ls -lh dist/
 ```
 
@@ -64,10 +64,10 @@ Useful flags:
 ## Publish
 
 ```sh
-scripts/publish-release.sh 0.1.0 --host-only   # or omit --host-only
+mise run release:publish 0.1.0 --host-only   # or omit --host-only
 ```
 
-The script will:
+The task will:
 
 1. Regenerate usage KDL, shell completions, and man
 2. Build platform tarballs (`default` and `desktop` when possible)
@@ -77,9 +77,9 @@ The script will:
 6. Dispatch `packslip-sign.yml` for that tag and wait until it is green
 
 Cross-OS triples are skipped when this host cannot build them (e.g. no
-Darwin archives from Linux). For a full matrix, run the publish script
-once per OS and attach missing assets with `gh release upload`, then
-re-run packslip-sign (or `gh workflow run packslip-sign.yml -f tag=…`).
+Darwin archives from Linux). For a full matrix, run publish once per OS
+and attach missing assets with `gh release upload`, then re-run
+packslip-sign (or `gh workflow run packslip-sign.yml -f tag=…`).
 
 ## What ships
 
@@ -121,15 +121,15 @@ PC via packslip:
 Omit `variant` for the cli-only build. Android: download
 `srcthread-<ver>-android.apk` from the GitHub release.
 
-## Lower-level scripts
+## Lower-level tasks
 
-Prefer `publish-release.sh`. For debugging a single step:
+Prefer `release:publish`. For debugging a single step:
 
-| Script | Role |
+| Task | Role |
 | --- | --- |
-| `scripts/release-assets.sh` | usage KDL + completions + man |
-| `scripts/build-tarball.sh [triple] [default\|desktop]` | One archive under `dist/` |
-| `scripts/checksums.sh` | `dist/SHASUMS256.txt` |
+| `mise run render:usage [--dist]` | usage KDL + completions + man |
+| `mise run release:tarball [triple] [default\|desktop]` | One archive under `dist/` |
+| `mise run release:checksums` | `dist/SHASUMS256.txt` |
 
 ## Checklist
 
@@ -137,5 +137,5 @@ Prefer `publish-release.sh`. For debugging a single step:
 2. `release-notes/<version>.md` written
 3. `mise run check-ci` (or rely on green CI on `main`)
 4. Dry-run with `--host-only`
-5. Real publish (`scripts/publish-release.sh` — waits on packslip-sign)
+5. Real publish (`mise run release:publish` — waits on packslip-sign)
 6. Spot-check mise install (no `pubkey`) and the APK
