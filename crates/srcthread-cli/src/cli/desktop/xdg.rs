@@ -229,7 +229,10 @@ mod tests {
             return;
         }
         let tmp = tempfile::tempdir().unwrap();
-        let roots = XdgRoots::for_test(tmp.path().to_path_buf(), PathBuf::from("/usr/bin/srcthread"));
+        let roots = XdgRoots::for_test(
+            tmp.path().to_path_buf(),
+            PathBuf::from("/usr/bin/srcthread"),
+        );
         install(&roots, Flavor::Ship).unwrap();
         assert!(roots.desktop_path(Flavor::Ship).is_file());
         assert!(roots.icon_path(Flavor::Ship).is_file());
