@@ -128,13 +128,15 @@ fn read_registry() -> Result<std::collections::BTreeMap<String, PathBuf>, Discov
 
 fn expand_tilde(p: &str) -> PathBuf {
     if p == "~"
-        && let Some(home) = std::env::var_os("HOME") {
-            return PathBuf::from(home);
-        }
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return PathBuf::from(home);
+    }
     if let Some(rest) = p.strip_prefix("~/")
-        && let Some(home) = std::env::var_os("HOME") {
-            return PathBuf::from(home).join(rest);
-        }
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return PathBuf::from(home).join(rest);
+    }
     PathBuf::from(p)
 }
 

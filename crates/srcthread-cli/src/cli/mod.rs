@@ -96,10 +96,11 @@ impl SrcthreadCli {
     /// Apply globals (`-C`, `--store`) then run the subcommand.
     pub(crate) fn run(self) -> ExitCode {
         if let Some(dir) = &self.cd
-            && let Err(err) = std::env::set_current_dir(dir) {
-                eprintln!("srcthread: -C {dir}: {err}");
-                return ExitCode::from(2);
-            }
+            && let Err(err) = std::env::set_current_dir(dir)
+        {
+            eprintln!("srcthread: -C {dir}: {err}");
+            return ExitCode::from(2);
+        }
         ctx::set_store_override(self.store);
         self.command.run()
     }
