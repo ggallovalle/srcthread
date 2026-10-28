@@ -7,8 +7,8 @@ srcthread \- Local\-first research threads over pinned source mirrors.
 Local\-first research threads over pinned source mirrors.
 .PP
 Declare stores, pin source mirrors, and keep research threads with
-anchors and offline excerpts. The same binary runs the socket daemon
-(`srcthread daemon`) and the rune desktop UI (`srcthread desktop`).
+anchors and offline excerpts. The same binary runs the rune desktop UI
+(`srcthread desktop`) and the MCP server (`srcthread mcp`).
 .PP
 .SH OPTIONS
 .TP
@@ -33,18 +33,6 @@ Print help
 \fB\-V, \-\-version\fR
 Print version
 .SH COMMANDS
-.TP
-\fBdaemon\fR
-Run or control the local socket daemon
-.RS
-\fIAliases: \fRd
-.RE
-.TP
-\fBdaemon stop\fR
-Stop a running daemon via the socket
-.TP
-\fBdaemon status\fR
-Show daemon reachability and socket path
 .TP
 \fBdesktop\fR
 Open the rune desktop UI
@@ -212,50 +200,16 @@ Uninstall an MCP integration
 Show MCP integration status
 .TP
 \fBdoctor\fR
-Environment / daemon / store health checks
+Environment / store health checks
 .RS
 \fIAliases: \fRdr
 .RE
 .TP
+\fBlint\fR
+Lint the active store (structural checks)
+.TP
 \fBhello\fR
-Hello\-world: daemon socket if up, else in\-process lib
-.SH "SRCTHREAD DAEMON"
-Run or control the local socket daemon
-
-With no subcommand, runs the daemon in the foreground (herdr\-style:
-`srcthread daemon` *is* the server process). Use `stop` / `status` against
-a running instance.
-.PP
-\fBUsage:\fR srcthread daemon [OPTIONS] [COMMAND]
-.PP
-\fBOptions:\fR
-.PP
-.TP
-\fB\-\-socket\fR \fI<PATH>\fR
-Unix socket path (default: `$XDG_RUNTIME_DIR/srcthread.sock`)
-.TP
-\fB\-h, \-\-help\fR
-Print help
-.SH "SRCTHREAD DAEMON STOP"
-Stop a running daemon via the socket
-.PP
-\fBUsage:\fR srcthread daemon stop [OPTIONS]
-.PP
-\fBOptions:\fR
-.PP
-.TP
-\fB\-h, \-\-help\fR
-Print help
-.SH "SRCTHREAD DAEMON STATUS"
-Show daemon reachability and socket path
-.PP
-\fBUsage:\fR srcthread daemon status [OPTIONS]
-.PP
-\fBOptions:\fR
-.PP
-.TP
-\fB\-h, \-\-help\fR
-Print help
+Hello\-world: in\-process lib greeting
 .SH "SRCTHREAD DESKTOP"
 Open the rune desktop UI
 
@@ -328,13 +282,19 @@ Create a new file\-canonical store directory
 \fBOptions:\fR
 .PP
 .TP
+\fB\-\-at\-path\fR
+Create the store at PATH itself instead of PATH/srcthread/
+.TP
+\fB\-\-name\fR \fI<NAME>\fR
+Display name in config.toml (default: directory name)
+.TP
 \fB\-h, \-\-help\fR
 Print help
 \fBArguments:\fR
 .PP
 .TP
 \fB<PATH>\fR
-Directory for the new store (git vault)
+Directory for the new store (git vault or project to nest under)
 .SH "SRCTHREAD STORE LIST"
 List known stores
 .PP
@@ -474,7 +434,7 @@ Add an anchor (repo@sha path line/span or symbol)
 Thread id
 .TP
 \fB\-\-repo\fR \fI<REPO>\fR
-Upstream repo URL or mirror id
+Mirror id (must exist in [mirrors] unless already a known id string)
 .TP
 \fB\-\-sha\fR \fI<SHA>\fR
 Pinned commit SHA
@@ -487,6 +447,9 @@ Optional 1\-based line
 .TP
 \fB\-\-symbol\fR \fI<SYMBOL>\fR
 Optional symbol name (e.g. op_get_env)
+.TP
+\fB\-\-id\fR \fI<ID>\fR
+Optional explicit anchor id
 .TP
 \fB\-h, \-\-help\fR
 Print help
@@ -555,10 +518,22 @@ Freeze an offline excerpt around an anchor
 Anchor id to excerpt
 .TP
 \fB\-\-context\fR \fI<CONTEXT>\fR
-Context lines before/after
+Context lines before/after when reading from a local mirror
 .RS
 \fIDefault: \fR10
 .RE
+.TP
+\fB\-\-thread\fR \fI<THREAD>\fR
+Thread id (default: thread that owns the anchor)
+.TP
+\fB\-\-body\-file\fR \fI<BODY_FILE>\fR
+Offline body file when the mirror clone is absent
+.TP
+\fB\-\-lang\fR \fI<LANG>\fR
+Fence language (default: guessed from anchor path, else text)
+.TP
+\fB\-\-id\fR \fI<ID>\fR
+Explicit excerpt id
 .TP
 \fB\-h, \-\-help\fR
 Print help
@@ -603,6 +578,15 @@ URL (PR, issue, doc, chat)
 .TP
 \fB\-\-file\fR \fI<FILE>\fR
 Optional local transcript / note path to ingest
+.TP
+\fB\-\-kind\fR \fI<KIND>\fR
+Ref kind (default: inferred from URL, else other)
+.TP
+\fB\-\-title\fR \fI<TITLE>\fR
+Display title
+.TP
+\fB\-\-id\fR \fI<ID>\fR
+Explicit ref id
 .TP
 \fB\-h, \-\-help\fR
 Print help
@@ -742,7 +726,7 @@ Print help
 .SH "SRCTHREAD SYNC GIT"
 Git\-backed store sync
 
-With no subcommand, shows git status (stub).
+With no subcommand, shows git status.
 .PP
 \fBUsage:\fR srcthread sync git [OPTIONS] [COMMAND]
 .PP
@@ -911,7 +895,7 @@ Write into the project (cwd) agent config
 \fB\-h, \-\-help\fR
 Print help
 .SH "SRCTHREAD DOCTOR"
-Environment / daemon / store health checks
+Environment / store health checks
 .PP
 \fBUsage:\fR srcthread doctor [OPTIONS]
 .PP
@@ -920,8 +904,24 @@ Environment / daemon / store health checks
 .TP
 \fB\-h, \-\-help\fR
 Print help
+.SH "SRCTHREAD LINT"
+Lint the active store (structural checks)
+
+Everyday commands stay lenient; use this for a strict pass. `\-\-fix` is
+reserved for safe autofixes (not implemented yet).
+.PP
+\fBUsage:\fR srcthread lint [OPTIONS]
+.PP
+\fBOptions:\fR
+.PP
+.TP
+\fB\-\-fix\fR
+Apply safe autofixes (stub)
+.TP
+\fB\-h, \-\-help\fR
+Print help
 .SH "SRCTHREAD HELLO"
-Hello\-world: daemon socket if up, else in\-process lib
+Hello\-world: in\-process lib greeting
 .PP
 \fBUsage:\fR srcthread hello [OPTIONS]
 .PP
