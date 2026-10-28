@@ -1,26 +1,22 @@
-//! `--user` / `--local` install scope.
+//! `--user` / `--local` install scope (usage-rs ArgGroup).
 
 use std::path::PathBuf;
 
+use usage_rs::ArgGroup;
+
 /// Where to read/write an agent's MCP config.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// Exactly one of these flags must be given on install/uninstall; status
+/// may omit the group to report both.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ArgGroup)]
 pub(crate) enum Scope {
-    /// Home / XDG user config.
+    /// Write into the user/home agent config
     User,
-    /// Project directory (cwd, or `-C` once wired).
+    /// Write into the project (cwd) agent config
     Local,
 }
 
 impl Scope {
-    pub(crate) fn from_flags(user: bool, local: bool) -> Result<Self, String> {
-        match (user, local) {
-            (true, false) => Ok(Self::User),
-            (false, true) => Ok(Self::Local),
-            (false, false) => Err("specify --user or --local".into()),
-            (true, true) => Err("specify only one of --user or --local".into()),
-        }
-    }
-
     pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::User => "user",

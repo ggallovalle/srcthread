@@ -12,20 +12,15 @@ use super::targets::Target;
 #[derive(Args)]
 #[usage(verbatim_doc_comment)]
 pub(crate) struct Status {
-    /// Only show user/home configs
-    #[usage(long)]
-    pub(crate) user: bool,
-
-    /// Only show project (cwd) configs
-    #[usage(long)]
-    pub(crate) local: bool,
+    #[usage(arg_group)]
+    pub(crate) scope: Option<Scope>,
 }
 
 impl Run for Status {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        match run_status(self.user, self.local) {
+        match run_status(self.scope) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("srcthread: {e}");
@@ -35,12 +30,10 @@ impl Run for Status {
     }
 }
 
-pub(crate) fn run_status(user: bool, local: bool) -> Result<(), String> {
-    let scopes = match (user, local) {
-        (false, false) => vec![Scope::User, Scope::Local],
-        (true, false) => vec![Scope::User],
-        (false, true) => vec![Scope::Local],
-        (true, true) => return Err("specify only one of --user or --local".into()),
+pub(crate) fn run_status(scope: Option<Scope>) -> Result<(), String> {
+    let scopes = match scope {
+        None => vec![Scope::User, Scope::Local],
+        Some(s) => vec![s],
     };
     let roots = Roots::from_env()?;
     status_with(&roots, &scopes)

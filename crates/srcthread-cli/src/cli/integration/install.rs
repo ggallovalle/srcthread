@@ -13,20 +13,15 @@ pub(crate) struct Install {
     /// Agent target: cursor, claude, opencode, or codex
     pub(crate) target: Target,
 
-    /// Write into the user/home agent config
-    #[usage(long)]
-    pub(crate) user: bool,
-
-    /// Write into the project (cwd) agent config
-    #[usage(long)]
-    pub(crate) local: bool,
+    #[usage(arg_group)]
+    pub(crate) scope: Scope,
 }
 
 impl Run for Install {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        match run_install(self.target, self.user, self.local) {
+        match run_install(self.target, self.scope) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("srcthread: {e}");
@@ -36,8 +31,7 @@ impl Run for Install {
     }
 }
 
-pub(crate) fn run_install(target: Target, user: bool, local: bool) -> Result<(), String> {
-    let scope = Scope::from_flags(user, local)?;
+pub(crate) fn run_install(target: Target, scope: Scope) -> Result<(), String> {
     let roots = Roots::from_env()?;
     install_with(&roots, target, scope)
 }

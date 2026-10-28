@@ -23,14 +23,6 @@ fn setup() -> (tempfile::TempDir, Roots) {
 }
 
 #[test]
-fn scope_flags_require_exactly_one() {
-    assert!(Scope::from_flags(false, false).is_err());
-    assert!(Scope::from_flags(true, true).is_err());
-    assert_eq!(Scope::from_flags(true, false).unwrap(), Scope::User);
-    assert_eq!(Scope::from_flags(false, true).unwrap(), Scope::Local);
-}
-
-#[test]
 fn cursor_user_install_uninstall_idempotent() {
     let (_tmp, roots) = setup();
     let path = Target::Cursor.config_path(Scope::User, &roots);

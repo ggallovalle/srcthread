@@ -13,20 +13,15 @@ pub(crate) struct Uninstall {
     /// Agent target: cursor, claude, opencode, or codex
     pub(crate) target: Target,
 
-    /// Remove from the user/home agent config
-    #[usage(long)]
-    pub(crate) user: bool,
-
-    /// Remove from the project (cwd) agent config
-    #[usage(long)]
-    pub(crate) local: bool,
+    #[usage(arg_group)]
+    pub(crate) scope: Scope,
 }
 
 impl Run for Uninstall {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        match run_uninstall(self.target, self.user, self.local) {
+        match run_uninstall(self.target, self.scope) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("srcthread: {e}");
@@ -36,8 +31,7 @@ impl Run for Uninstall {
     }
 }
 
-pub(crate) fn run_uninstall(target: Target, user: bool, local: bool) -> Result<(), String> {
-    let scope = Scope::from_flags(user, local)?;
+pub(crate) fn run_uninstall(target: Target, scope: Scope) -> Result<(), String> {
     let roots = Roots::from_env()?;
     uninstall_with(&roots, target, scope)
 }
