@@ -20,6 +20,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Personal releases: sign with the debug keystore until a
+            // release keystore is wired via env / CI secrets.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
