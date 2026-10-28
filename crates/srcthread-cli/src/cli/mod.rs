@@ -11,6 +11,7 @@ mod desktop;
 mod doctor;
 mod excerpt;
 mod hello;
+mod integration;
 mod mcp;
 mod mirror;
 mod r#ref;
@@ -82,6 +83,8 @@ pub(crate) enum Commands {
     Sync(sync::Sync),
     /// Run the MCP stdio server (stub)
     Mcp(mcp::Mcp),
+    /// Manage built-in agent MCP integrations
+    Integration(integration::Integration),
     /// Environment / daemon / store health checks
     #[usage(visible_alias = "dr")]
     Doctor(doctor::Doctor),

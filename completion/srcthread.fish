@@ -263,6 +263,37 @@ With no subcommand, shows git status (stub).
 cmd mcp help="Run the MCP stdio server (stub)" {
     flag "-h --help" help="Print help" action=help builtin=#true
 }
+cmd integration subcommand_required=#true help="Manage built-in agent MCP integrations" {
+    long_help #"""
+Manage built-in agent MCP integrations
+
+Install, uninstall, or show status for registering `srcthread mcp` in
+coding-agent configs (Cursor, Claude, OpenCode, Codex).
+"""#
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd install help="Install an MCP integration" {
+        flag --user help="Write into the user/home agent config"
+        flag --local help="Write into the project (cwd) agent config"
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <TARGET> help="Agent target: cursor, claude, opencode, or codex"
+    }
+    cmd uninstall help="Uninstall an MCP integration" {
+        flag --user help="Remove from the user/home agent config"
+        flag --local help="Remove from the project (cwd) agent config"
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <TARGET> help="Agent target: cursor, claude, opencode, or codex"
+    }
+    cmd status help="Show integration status" {
+        long_help #"""
+Show MCP integration status
+
+With no scope flag, prints both user and local for every target.
+"""#
+        flag --user help="Only show user/home configs"
+        flag --local help="Only show project (cwd) configs"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+}
 cmd doctor help="Environment / daemon / store health checks" {
     alias dr
     flag "-h --help" help="Print help" action=help builtin=#true
