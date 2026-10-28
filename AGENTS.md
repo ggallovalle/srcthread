@@ -36,6 +36,8 @@ for the daemon or GUI.
 - `ktpackages/srcthread` — Kotlin Android library; UniFFI + `SrcThread` facade
 - `apps/android` — Kotlin + Jetpack Compose UI (depends on kt package)
 - `nvim/` — Neovim plugin (picker / open-at-line)
+- `packaging/linux/` — FreeDesktop `.desktop` + app icon (`-dev` ship badge
+  via `shellrc/zsh`)
 - Gradle root + `detekt.yaml` sit next to `Cargo.toml`
 
 ## Commands

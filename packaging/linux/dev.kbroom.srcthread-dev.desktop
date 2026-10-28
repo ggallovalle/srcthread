@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=srcthread (dev)
+Comment=Personal research threads over local source (workspace)
+Exec=srcthread desktop
+TryExec=srcthread
+Icon=dev.kbroom.srcthread-dev
+Terminal=false
+Categories=Development;
+StartupNotify=true
+StartupWMClass=srcthread
+Keywords=research;source;code;threads;anchors;notes;dev;

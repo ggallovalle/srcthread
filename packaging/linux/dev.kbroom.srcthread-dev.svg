@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#1a1a1a"/>
+  <g fill="#636363">
+    <rect x="48" y="88" width="280" height="44" rx="22"/>
+    <rect x="48" y="150" width="416" height="44" rx="22"/>
+    <rect x="48" y="212" width="360" height="44" rx="22"/>
+    <rect x="48" y="274" width="416" height="44" rx="22"/>
+    <rect x="48" y="336" width="300" height="44" rx="22"/>
+    <rect x="48" y="398" width="380" height="44" rx="22"/>
+  </g>
+  <path
+    d="M80 420
+       C 130 420, 150 360, 200 350
+       C 260 336, 280 400, 330 385
+       C 380 370, 390 300, 410 250
+       C 425 220, 430 195, 435 175"
+    fill="none"
+    stroke="#f39c12"
+    stroke-width="26"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="435" cy="175" r="26" fill="#f39c12"/>
+  <!-- Dev ship badge (top-right) -->
+  <g transform="translate(392 28)">
+    <circle cx="46" cy="46" r="46" fill="#242424" stroke="#f39c12" stroke-width="5"/>
+    <g transform="translate(18 16)" fill="#f39c12">
+      <!-- mast -->
+      <rect x="26" y="4" width="4" height="42" rx="1"/>
+      <!-- mainsail -->
+      <path d="M31 8 L31 40 L52 36 Z"/>
+      <!-- jib -->
+      <path d="M25 14 L25 36 L10 34 Z"/>
+      <!-- hull -->
+      <path d="M6 46 L50 46 L46 56 L12 56 Z"/>
+    </g>
+  </g>
+</svg>
