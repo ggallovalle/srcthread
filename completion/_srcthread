@@ -62,7 +62,25 @@ a running instance.
     }
 }
 cmd desktop help="Open the rune desktop UI" {
+    long_help #"""
+Open the rune desktop UI
+
+With no subcommand, launches the desktop. Use `install-xdg` /
+`uninstall-xdg` / `xdg-status` for FreeDesktop launcher and icons.
+"""#
     flag "-h --help" help="Print help" action=help builtin=#true
+    cmd install-xdg help="Install FreeDesktop .desktop entry and icon" {
+        flag --dev help="Install the ship-badged -dev launcher (workspace / shellrc)"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd uninstall-xdg help="Remove FreeDesktop .desktop entry and icon" {
+        flag --dev help="Remove the ship-badged -dev launcher"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd xdg-status help="Show FreeDesktop install status" {
+        flag --dev help="Check the ship-badged -dev launcher"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
 }
 cmd store help="Manage file-canonical research stores (git vaults)" {
     long_help #"""
