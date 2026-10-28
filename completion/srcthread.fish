@@ -42,8 +42,12 @@ With no subcommand, prints the active store path (stub).
 """#
     flag "-h --help" help="Print help" action=help builtin=#true
     cmd init help="Create a new file-canonical store directory" {
+        flag --at-path help="Create the store at PATH itself instead of PATH/srcthread/"
+        flag --name help="Display name in config.toml (default: directory name)" {
+            arg <NAME>
+        }
         flag "-h --help" help="Print help" action=help builtin=#true
-        arg <PATH> help="Directory for the new store (git vault)"
+        arg <PATH> help="Directory for the new store (git vault or project to nest under)"
     }
     cmd list help="List known stores" {
         alias ls

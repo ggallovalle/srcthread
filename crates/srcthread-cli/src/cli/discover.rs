@@ -106,24 +106,89 @@ fn default_from_registry() -> Result<Option<PathBuf>, DiscoverError> {
 }
 
 fn read_registry() -> Result<std::collections::BTreeMap<String, PathBuf>, DiscoverError> {
+    Ok(list_registry_stores()?.into_iter().collect())
+}
+
+/// All `[stores.<id>]` entries from the user registry.
+pub(crate) fn list_registry_stores() -> Result<Vec<(String, PathBuf)>, DiscoverError> {
     let path = ctx::stores_toml_path();
-    let mut map = std::collections::BTreeMap::new();
+    let mut out = Vec::new();
     if !path.is_file() {
-        return Ok(map);
+        return Ok(out);
     }
     let text =
         fs::read_to_string(&path).map_err(|e| DiscoverError::Message(format!("{path:?}: {e}")))?;
     let value: Value =
         toml::from_str(&text).map_err(|e| DiscoverError::Message(format!("stores.toml: {e}")))?;
     let Some(stores) = value.get("stores").and_then(|v| v.as_table()) else {
-        return Ok(map);
+        return Ok(out);
     };
     for (id, entry) in stores {
         if let Some(p) = entry.get("path").and_then(|v| v.as_str()) {
-            map.insert(id.clone(), expand_tilde(p));
+            out.push((id.clone(), expand_tilde(p)));
         }
     }
-    Ok(map)
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(out)
+}
+
+/// Look up a registered store path by id.
+pub(crate) fn registry_path_for(id: &str) -> Result<Option<PathBuf>, String> {
+    read_registry()
+        .map(|m| m.get(id).cloned())
+        .map_err(|e| e.to_string())
+}
+
+/// Upsert `[stores.<id>].path` in the user registry.
+pub(crate) fn upsert_registry_store(id: &str, root: &Path) -> Result<(), String> {
+    let path = ctx::stores_toml_path();
+    let mut value = load_or_empty_registry(&path)?;
+    let root_str = root.display().to_string();
+    let stores = value
+        .as_table_mut()
+        .ok_or_else(|| "stores.toml root must be a table".to_string())?
+        .entry("stores".to_string())
+        .or_insert_with(|| Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| "[stores] must be a table".to_string())?;
+    let entry = stores
+        .entry(id.to_string())
+        .or_insert_with(|| Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| format!("[stores.{id}] must be a table"))?;
+    entry.insert("path".into(), Value::String(root_str));
+    write_registry(&path, &value)
+}
+
+/// Set `[defaults].store`.
+pub(crate) fn set_default_store(id: &str) -> Result<(), String> {
+    let path = ctx::stores_toml_path();
+    let mut value = load_or_empty_registry(&path)?;
+    let defaults = value
+        .as_table_mut()
+        .ok_or_else(|| "stores.toml root must be a table".to_string())?
+        .entry("defaults".to_string())
+        .or_insert_with(|| Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| "[defaults] must be a table".to_string())?;
+    defaults.insert("store".into(), Value::String(id.to_string()));
+    write_registry(&path, &value)
+}
+
+fn load_or_empty_registry(path: &Path) -> Result<Value, String> {
+    if !path.is_file() {
+        return Ok(Value::Table(Default::default()));
+    }
+    let text = fs::read_to_string(path).map_err(|e| format!("{path:?}: {e}"))?;
+    toml::from_str(&text).map_err(|e| format!("stores.toml: {e}"))
+}
+
+fn write_registry(path: &Path, value: &Value) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("{parent:?}: {e}"))?;
+    }
+    let body = toml::to_string_pretty(value).map_err(|e| e.to_string())?;
+    fs::write(path, body).map_err(|e| format!("{path:?}: {e}"))
 }
 
 fn expand_tilde(p: &str) -> PathBuf {

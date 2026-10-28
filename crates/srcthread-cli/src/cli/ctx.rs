@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 static STORE_OVERRIDE: OnceLock<Option<String>> = OnceLock::new();
+static YES: OnceLock<bool> = OnceLock::new();
 
 /// Record `--store` from the root CLI (call once at startup).
 pub(crate) fn set_store_override(store: Option<String>) {
@@ -12,6 +13,15 @@ pub(crate) fn set_store_override(store: Option<String>) {
 
 pub(crate) fn store_override() -> Option<&'static str> {
     STORE_OVERRIDE.get().and_then(|s| s.as_deref())
+}
+
+/// Record global `-y` / `--yes`.
+pub(crate) fn set_yes(yes: bool) {
+    let _ = YES.set(yes);
+}
+
+pub(crate) fn yes() -> bool {
+    YES.get().copied().unwrap_or(false)
 }
 
 /// XDG config home for the store registry.

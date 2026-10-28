@@ -105,6 +105,7 @@ impl SrcthreadCli {
             return ExitCode::from(2);
         }
         ctx::set_store_override(self.store);
+        ctx::set_yes(self.yes);
         self.command.run()
     }
 }
