@@ -35,16 +35,12 @@ pub(crate) struct Roots {
 
 impl Roots {
     pub(crate) fn from_env() -> Result<Self, String> {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| "HOME is not set".to_string())?;
-        let config_home = std::env::var_os("XDG_CONFIG_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| home.join(".config"));
+        let dirs = directories::BaseDirs::new()
+            .ok_or_else(|| "could not resolve home/config directories".to_string())?;
         let cwd = std::env::current_dir().map_err(|e| format!("current directory: {e}"))?;
         Ok(Self {
-            home,
-            config_home,
+            home: dirs.home_dir().to_path_buf(),
+            config_home: dirs.config_dir().to_path_buf(),
             cwd,
         })
     }
