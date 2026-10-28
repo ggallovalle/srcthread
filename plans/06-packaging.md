@@ -48,7 +48,10 @@ triggers until the manual script is retired.
 
 ```toml
 [tools]
-"packslip:github.com/ggallovalle/srcthread" = { version = "0.1.0", variant = "desktop" }
+"packslip:github.com/ggallovalle/srcthread" = {
+  version = "0.1.0",
+  variant = "desktop",
+}
 ```
 
 Android: download `srcthread-*-android.apk` from the GitHub release.
