@@ -22,6 +22,13 @@ Private personal project for now.
 PC distribution follows herdr’s single-binary idea for CLI + desktop + MCP
 (`research/08-herdr-single-binary.md`), without a socket daemon.
 
+## In-repo store (dogfood)
+
+This repository nests a store at [`srcthread/`](srcthread/) — same layout a
+normal project would use. The exemplar thread is **How is Deno.env.get
+implemented?** (anchors, excerpts, refs, notes against
+`denoland/deno @ 6e9f66f5…`).
+
 ## Quick start
 
 ```sh

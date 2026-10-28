@@ -39,8 +39,9 @@ Revisit only if product needs show up in use:
 3. **Always-on peer receive** (Localsend-like listener).
 4. **Mirror fetch locking** so concurrent clients do not race clones.
 
-Until then, cold walk / `rg` over the store is fine; long-lived hosts may keep
-an optional **in-process** RAM index later (fff), not a central socket server.
+Until then, an in-process **cold walk** over the store is fine (no `rg` —
+keeps Android viable). Long-lived hosts may keep an optional **in-process**
+RAM index later (fff), not a central socket server.
 
 ## v1 process model
 

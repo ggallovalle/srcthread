@@ -33,4 +33,6 @@ Useful internals (same repo): `file_picker.rs`, `scan.rs`,
 3. **Path index first** — threads/anchors useful before content warm-up.
 4. **Event-driven updates** — store mutations (and FS watchers on store dirs)
    feed the host’s index; rare rebuild beats periodic full walks.
-5. **Cold walk / `rg`** is fine for short-lived CLI until a host index exists.
+5. **In-process cold walk** for v1 (CLI and Android). Do **not** shell out to
+   `rg`/`fd` — external binaries are not on Android and must not become a lib
+   dependency. Optional fff-shaped warm index later inside long-lived hosts.

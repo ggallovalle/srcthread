@@ -1,0 +1,5 @@
+id = "deno-env-get-01HK3K6N8R"
+title = "How is Deno.env.get implemented?"
+tags = ["deno", "env", "permissions", "ops"]
+created = "2026-10-28T10:00:00Z"
+updated = "2026-10-28T11:00:00Z"

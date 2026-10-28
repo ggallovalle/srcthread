@@ -14,7 +14,10 @@ and thin surfaces (CLI, nvim, desktop, Android, MCP) that all embed the
 **No PC daemon in v1.** Herdr’s socket server was the wrong spine for a
 mergeable file vault — see [research/09-no-daemon.md](research/09-no-daemon.md).
 Optional warm indexes belong in long-lived hosts (desktop / nvim / MCP) later,
-fff-style; cold walk is enough until then.
+fff-style; v1 search is an in-process cold walk (no `rg` — Android-safe).
+`srcthread lint [--fix]` for strict checks; everyday commands stay lenient
+(tracing / `SRCTHREAD_LOG=`). Store evolution is mise-shaped; JSON Schemas
+derived day one (`research/10-schema-evolution-mise.md`).
 
 PC install stays **one binary** (`srcthread`) with library subcommands
 `desktop` and `mcp` ([research/08-herdr-single-binary.md](research/08-herdr-single-binary.md)).
