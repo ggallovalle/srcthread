@@ -24,11 +24,16 @@ run automatically on `:ktpackages:srcthread` `preBuild`.
 ## mise tasks (android CLI — not sdkmanager)
 
 ```sh
-mise run android-emulator   # android emulator start <avd>
-mise run android-start      # assembleDebug → install → launch
+mise run android-emulator              # android emulator start <avd>
+mise run android-start                 # assembleDebug → install → launch on every reachable target
+mise run android-start --emulator      # emulators only (fail if none)
+mise run android-start --device         # physical devices only (fail if none)
+mise run android-start --emulator --device  # both kinds required
 ```
 
-Override the AVD with `SRCTHREAD_AVD=medium_phone`.
+With no flags, any online emulator and/or handset is used (at least one
+required). Override the AVD with `SRCTHREAD_AVD=medium_phone`. Pin a handset
+with `SRCTHREAD_ANDROID_SERIAL=<serial>` (or `ANDROID_SERIAL`).
 
 Default AVD `Pixel_9_API_37.2` needs host keyboard support so the
 emulator sidebar Home / Back / Recents buttons inject keys:

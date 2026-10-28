@@ -87,11 +87,4 @@ run = [
   "android emulator start ${SRCTHREAD_AVD:-Pixel_9_API_37.2}",
 ]
 
-[tasks."android-start"]
-description = "Build, install, and launch the Android app via android CLI"
-dir = "{{config_root}}"
-run = [
-  "./gradlew :apps:android:assembleDebug",
-  "android install --apks apps/android/build/outputs/apk/debug/android-debug.apk",
-  "adb shell am start -n dev.kbroom.srcthread/.MainActivity",
-]
+# android-start lives in mise/tasks/android-start (file task with --emulator/--device).
