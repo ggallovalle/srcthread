@@ -37,14 +37,20 @@ PC via packslip (after a tagged release):
 
 ```toml
 [tools]
-"packslip:github.com/ggallovalle/srcthread" = { version = "0.1.0", variant = "desktop" }
+"packslip:github.com/ggallovalle/srcthread" = {
+  version = "0.1.0",
+  variant = "desktop",
+}
 ```
 
 Omit `variant` for the cli-only build (`--no-default-features`). Optional
 postinstall:
 
 ```toml
-postinstall = "srcthread integration install cursor --user && srcthread desktop install-xdg"
+postinstall = """
+  srcthread integration install cursor --user && \
+  srcthread desktop install-xdg
+"""
 ```
 
 Agent MCP wiring and FreeDesktop helpers:
