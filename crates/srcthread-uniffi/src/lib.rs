@@ -155,11 +155,13 @@ mod tests {
                 .expect("threads")
                 .contains(&"from-a".to_string())
         );
-        assert!(host_b.threads.lock().expect("threads").is_empty()
-            || !host_b
-                .threads
-                .lock()
-                .expect("threads")
-                .contains(&"from-a".to_string()));
+        assert!(
+            host_b.threads.lock().expect("threads").is_empty()
+                || !host_b
+                    .threads
+                    .lock()
+                    .expect("threads")
+                    .contains(&"from-a".to_string())
+        );
     }
 }
