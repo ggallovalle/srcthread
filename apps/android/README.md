@@ -29,7 +29,7 @@ run automatically on `:ktpackages:srcthread` `preBuild`.
 
 ```sh
 mise run android-emulator              # android emulator start <avd>
-mise run android-start                 # assembleDebug → install → launch on every reachable target
+mise run android-start                 # assembleDebug → install → launch
 mise run android-start --emulator      # emulators only (fail if none)
 mise run android-start --device         # physical devices only (fail if none)
 mise run android-start --emulator --device  # both kinds required
