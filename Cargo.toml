@@ -24,6 +24,7 @@ license = "MIT"
 directories = "6"
 jsonc-parser = { version = "0.34", features = ["cst"] }
 pretty_assertions = "1"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rmcp = { version = "3", features = ["macros", "schemars", "server", "transport-io"] }
 rune = { git = "https://github.com/ggallovalle/rune.git", rev = "db5abf42130beb9f530b1947635f859958ce89ca" }
 schemars = "1"

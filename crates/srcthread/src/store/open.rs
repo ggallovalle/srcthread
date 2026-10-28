@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
+use crate::store::thread::{LoadedThread, load_thread_dir};
 use crate::types::{StoreConfig, ThreadMeta};
 
 /// On-disk store handle (config loaded; threads cold-walked on demand).
@@ -56,6 +57,20 @@ impl DiskStore {
         }
         let text = fs::read_to_string(meta_path)?;
         toml::from_str(&text).map_err(Error::toml)
+    }
+
+    /// Load anchors, excerpts, refs, and notes for a thread.
+    pub fn load_thread(&self, id: &str) -> Result<LoadedThread> {
+        let dir = self.root.join("threads").join(id);
+        if !dir.is_dir() {
+            return Err(Error::ThreadNotFound(id.to_string()));
+        }
+        load_thread_dir(&dir)
+    }
+
+    /// Resolve a mirror id to its git URL from config.
+    pub fn mirror_git(&self, id: &str) -> Option<&str> {
+        self.config.mirrors.get(id).map(|m| m.git.as_str())
     }
 }
 

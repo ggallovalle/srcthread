@@ -4,6 +4,7 @@
 //! nvim, and Android call this in-process.
 
 mod error;
+pub mod markdown;
 pub mod schema;
 mod store;
 pub mod types;
@@ -12,7 +13,11 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub use error::{Error, Result};
-pub use store::{DiskStore, resolve_store_root};
+pub use markdown::{Fence, extract_fences, split_toml_frontmatter};
+pub use store::{
+    DiskStore, LoadedAnchor, LoadedExcerpt, LoadedRef, LoadedThread, load_thread_dir,
+    resolve_store_root,
+};
 pub use types::*;
 
 /// In-memory hello-world store (tests / surfaces not yet on disk).
@@ -133,6 +138,16 @@ impl Srcthread {
         }
     }
 
+    /// Load full thread (anchors/excerpts/refs/notes). Disk only.
+    pub fn load_thread(&self, id: &str) -> Result<LoadedThread> {
+        match &*self.backend {
+            Backend::Disk(d) => d.load_thread(id),
+            Backend::Memory(_) => Err(Error::toml(
+                "load_thread requires an on-disk store".to_string(),
+            )),
+        }
+    }
+
     /// Create a research thread id (memory only for now).
     pub fn create_thread(&self, id: impl Into<String>) -> Result<()> {
         let id = id.into();
@@ -194,5 +209,30 @@ mod tests {
         let cfg = eng.disk().unwrap().config();
         assert_eq!(cfg.store.name, "srcthread dogfood");
         assert!(cfg.mirrors.contains_key("deno"));
+    }
+
+    #[test]
+    fn seed_thread_loads_anchors_excerpts_refs() {
+        let eng = Srcthread::open(repo_seed()).unwrap();
+        let t = eng.load_thread("deno-env-get-01HK3K6N8R").unwrap();
+        assert!(t.notes.contains("Deno.env.get"));
+        assert!(t.anchors.len() >= 2);
+        assert!(!t.excerpts.is_empty());
+        assert!(!t.refs.is_empty());
+        assert!(t.excerpts.iter().any(|e| !e.fences.is_empty()));
+        assert!(
+            t.anchors
+                .iter()
+                .any(|a| !a.embedded_fences.is_empty() || a.path.extension().is_some())
+        );
+        let git = eng.disk().unwrap().mirror_git("deno").unwrap();
+        assert!(git.contains("denoland/deno"));
+        let rust_excerpt = t
+            .excerpts
+            .iter()
+            .find(|e| e.meta.id == "op-get-env-body-01HK3K6N93")
+            .expect("rust excerpt");
+        assert_eq!(rust_excerpt.meta.anchor_id, "op-get-env-01HK3K6N90");
+        assert!(rust_excerpt.fences[0].body.contains("op_get_env"));
     }
 }
