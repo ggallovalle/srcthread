@@ -17,10 +17,10 @@ default-members = [
 ]
 
 [workspace.package]
+version = "0.2.0"
 authors = ["Gerson Gallo <ggallovalle@gmail.com>"]
 edition = "2024"
 license = "MIT"
-version = "0.2.0"
 
 [workspace.dependencies]
 directories = "6"
