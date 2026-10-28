@@ -6,7 +6,9 @@
 //! `research/08-herdr-single-binary.md`, and `research/09-no-daemon.md`.
 
 mod anchor;
+mod ctx;
 mod desktop;
+mod discover;
 mod doctor;
 mod excerpt;
 mod hello;
@@ -20,7 +22,9 @@ mod sync;
 mod thread;
 mod util;
 
-use usage_rs::{Cli, Subcommands};
+use std::process::ExitCode;
+
+use usage_rs::{Cli, Run, Subcommands};
 
 /// Local-first research threads over pinned source mirrors.
 ///
@@ -86,4 +90,17 @@ pub(crate) enum Commands {
     Doctor(doctor::Doctor),
     /// Hello-world: in-process lib greeting
     Hello(hello::Hello),
+}
+
+impl SrcthreadCli {
+    /// Apply globals (`-C`, `--store`) then run the subcommand.
+    pub(crate) fn run(self) -> ExitCode {
+        if let Some(dir) = &self.cd
+            && let Err(err) = std::env::set_current_dir(dir) {
+                eprintln!("srcthread: -C {dir}: {err}");
+                return ExitCode::from(2);
+            }
+        ctx::set_store_override(self.store);
+        self.command.run()
+    }
 }

@@ -1,7 +1,8 @@
 use std::process::ExitCode;
 
-use srcthread::Srcthread;
 use usage_rs::{Args, Run};
+
+use crate::cli::discover;
 
 /// List research threads (query).
 #[derive(Args)]
@@ -11,9 +12,24 @@ impl Run for List {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        for id in Srcthread::open_memory().list_threads() {
-            println!("{id}");
+        let eng = match discover::open_active_store() {
+            Ok(e) => e,
+            Err(err) => {
+                eprintln!("srcthread: {err}");
+                return ExitCode::from(1);
+            }
+        };
+        match eng.list_thread_meta() {
+            Ok(threads) => {
+                for t in threads {
+                    println!("{}\t{}", t.id, t.title);
+                }
+                ExitCode::SUCCESS
+            }
+            Err(err) => {
+                eprintln!("srcthread: {err}");
+                ExitCode::from(1)
+            }
         }
-        ExitCode::SUCCESS
     }
 }
