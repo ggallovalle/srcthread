@@ -1,27 +1,30 @@
 # srcthread (Android)
 
-Kotlin + Jetpack Compose UI that loads the Rust engine via
-[UniFFI](https://mozilla.github.io/uniffi-rs/) (`crates/srcthread-uniffi`).
+Kotlin + Jetpack Compose UI. The app depends only on
+[`ktpackages/srcthread`](../../ktpackages/srcthread), which owns UniFFI and
+exposes a Compose-aware [`SrcThread`](../../ktpackages/srcthread/src/main/java/dev/kbroom/srcthread/SrcThread.kt)
+state holder.
 
-Hello-world talks **both ways**:
+Hello-world:
 
-- Kotlin → Rust: `hello`, `listThreads` (query), `createThread` (mutation)
-- Rust → Kotlin: `HostCallbacks.onLog` / `onThreadsChanged`
+- Reads `greeting` / `threads` as Compose `State`
+- Mutates via `createThread` (Rust → Kotlin push updates state inside the package)
+
+Gradle lives at the **repo root** (next to `Cargo.toml`). UniFFI bindgen + NDK
+run automatically on `:ktpackages:srcthread` `preBuild`.
 
 ## What’s here
 
 - Compose `MainActivity` (`dev.kbroom.srcthread`)
 - `applicationId` / `namespace`: `dev.kbroom.srcthread`
-- UniFFI package: `dev.kbroom.srcthread.uniffi`
-- detekt + ktlint-wrapper (`config/detekt.yaml`; also via `mise run detekt` / hk)
+- detekt + ktlint-wrapper (repo-root `detekt.yaml`; also via `mise run detekt` / hk)
 - `minSdk` 26, `compileSdk` 35
 
 ## mise tasks (android CLI — not sdkmanager)
 
 ```sh
 mise run android-emulator   # android emulator start <avd>
-mise run android-uniffi     # generate Kotlin + NDK .so into jniLibs
-mise run android-start      # android run --activity .MainActivity
+mise run android-start      # assembleDebug → install → launch
 ```
 
 Override the AVD with `SRCTHREAD_AVD=medium_phone`.
@@ -29,10 +32,9 @@ Override the AVD with `SRCTHREAD_AVD=medium_phone`.
 ## Manual build
 
 ```sh
-cd apps/android
-./gradlew bootstrapUniffi cargoNdkUniffi
-./gradlew :app:assembleDebug
-./gradlew detekt
+# from repo root
+./gradlew :apps:android:assembleDebug
+./gradlew :apps:android:detekt :ktpackages:srcthread:detekt
 ```
 
 Needs the `android` CLI on `PATH`, NDK (`android sdk install 'ndk;…'`),

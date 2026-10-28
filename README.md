@@ -14,7 +14,8 @@ Private personal project for now.
 | `srcthread-cli` | [`crates/srcthread-cli`](crates/srcthread-cli) | **Sole PC binary** `srcthread` |
 | `srcthread-mcp` | [`crates/srcthread-mcp`](crates/srcthread-mcp) | MCP **library** (via `srcthread mcp`) |
 | desktop | [`apps/desktop`](apps/desktop) | Rune UI **library** (`srcthread desktop`) |
-| android | [`apps/android`](apps/android) | Kotlin Compose + UniFFI |
+| android | [`apps/android`](apps/android) | Kotlin Compose UI |
+| `srcthread` (kt) | [`ktpackages/srcthread`](ktpackages/srcthread) | Compose `SrcThread` + UniFFI |
 | nvim | [`nvim`](nvim) | Neovim plugin |
 
 PC distribution follows herdr: one binary covers CLI, daemon, and desktop

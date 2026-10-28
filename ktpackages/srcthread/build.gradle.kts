@@ -1,28 +1,21 @@
 import java.io.File
 
 plugins {
-    id("com.android.application")
+    id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("io.gitlab.arturbosch.detekt")
 }
 
 android {
-    namespace = "dev.kbroom.srcthread"
+    // Distinct from the app module namespace; Kotlin public API stays
+    // package `dev.kbroom.srcthread`.
+    namespace = "dev.kbroom.srcthread.lib"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.kbroom.srcthread"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "0.0.1"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-        }
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {
@@ -41,6 +34,7 @@ android {
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
+            java.srcDir(layout.buildDirectory.dir("generated/source/uniffi"))
         }
     }
 }
@@ -48,36 +42,44 @@ android {
 detekt {
     buildUponDefaultConfig = true
     allRules = false
-    config.setFrom(files("${rootProject.projectDir}/config/detekt.yaml"))
-    // Hand-written sources only (skip generated UniFFI under uniffi/).
-    source.setFrom(files("src/main/java/dev/kbroom/srcthread/MainActivity.kt"))
+    config.setFrom(files("${rootProject.projectDir}/detekt.yaml"))
+    source.setFrom(
+        files(
+            "src/main/java/dev/kbroom/srcthread/SrcThread.kt",
+            "src/main/java/dev/kbroom/srcthread/SrcThreadFfi.kt",
+            "src/main/java/dev/kbroom/srcthread/rememberSrcThread.kt",
+        ),
+    )
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
-    implementation(composeBom)
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-
-    // UniFFI Kotlin runtime (JNA loads libsrcthread_uniffi.so from jniLibs).
+    implementation(platform("androidx.compose:compose-bom:2024.10.01"))
+    implementation("androidx.compose.runtime:runtime")
     implementation("net.java.dev.jna:jna:5.17.0@aar")
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.8")
 }
 
-val repoRoot = rootProject.projectDir.parentFile!!.parentFile!!
+val repoRoot = rootProject.projectDir
 val cargoTargetDir = File(repoRoot, "target")
-val uniffiPackageDir =
-    File(projectDir, "src/main/java/dev/kbroom/srcthread/uniffi")
+val uniffiOutDir = layout.buildDirectory.dir("generated/source/uniffi")
 val jniLibsDir = File(projectDir, "src/main/jniLibs")
+val rustSources = fileTree(File(repoRoot, "crates/srcthread-uniffi")) {
+    include("**/*.rs")
+    include("**/*.toml")
+}
+val engineSources = fileTree(File(repoRoot, "crates/srcthread")) {
+    include("**/*.rs")
+    include("**/*.toml")
+}
+val uniffiToml = File(repoRoot, "crates/srcthread-uniffi/uniffi.toml")
 
 tasks.register<Exec>("cargoBuildUniffiHost") {
     group = "uniffi"
     description = "Build srcthread-uniffi for the host (binding generation)"
     workingDir = repoRoot
     commandLine("cargo", "build", "-p", "srcthread-uniffi")
+    inputs.files(rustSources, engineSources)
+    outputs.dir(File(cargoTargetDir, "debug"))
 }
 
 tasks.register<Exec>("generateUniffiKotlin") {
@@ -95,18 +97,17 @@ tasks.register<Exec>("generateUniffiKotlin") {
             else -> "libsrcthread_uniffi.so"
         }
     val library = File(cargoTargetDir, "debug/$libName")
+    val outDir = uniffiOutDir.get().asFile
+
+    inputs.files(rustSources, engineSources, uniffiToml)
+    outputs.dir(outDir)
 
     doFirst {
-        uniffiPackageDir.mkdirs()
+        outDir.mkdirs()
         require(library.isFile) {
             "missing $library — run cargoBuildUniffiHost first"
         }
     }
-
-    // Generate under src/main/java so package_name from uniffi.toml lands at
-    // dev/kbroom/srcthread/uniffi/.
-    val javaSrc = File(projectDir, "src/main/java")
-    val uniffiToml = File(repoRoot, "crates/srcthread-uniffi/uniffi.toml")
 
     commandLine(
         "cargo",
@@ -122,7 +123,7 @@ tasks.register<Exec>("generateUniffiKotlin") {
         "--language",
         "kotlin",
         "--out-dir",
-        javaSrc.absolutePath,
+        outDir.absolutePath,
         "--config",
         uniffiToml.absolutePath,
         "--no-format",
@@ -132,9 +133,11 @@ tasks.register<Exec>("generateUniffiKotlin") {
 tasks.register<Exec>("cargoNdkUniffi") {
     group = "uniffi"
     description =
-        "Cross-compile libsrcthread_uniffi.so into app/src/main/jniLibs " +
+        "Cross-compile libsrcthread_uniffi.so into jniLibs " +
             "(requires cargo-ndk + Android NDK)"
     workingDir = repoRoot
+    inputs.files(rustSources, engineSources)
+    outputs.dir(jniLibsDir)
     commandLine(
         "cargo",
         "ndk",
@@ -151,13 +154,6 @@ tasks.register<Exec>("cargoNdkUniffi") {
     )
 }
 
-tasks.register("bootstrapUniffi") {
-    group = "uniffi"
-    description = "Host build + Kotlin bindings (NDK optional via cargoNdkUniffi)"
-    dependsOn("generateUniffiKotlin")
-}
-
 tasks.named("preBuild").configure {
-    // Prefer committed/generated bindings; regenerate when explicitly asked.
-    // Local full bootstrap: ./gradlew bootstrapUniffi cargoNdkUniffi
+    dependsOn("generateUniffiKotlin", "cargoNdkUniffi")
 }

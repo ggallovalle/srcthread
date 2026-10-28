@@ -15,4 +15,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "srcthread"
-include(":app")
+include(":ktpackages:srcthread")
+include(":apps:android")

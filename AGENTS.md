@@ -10,7 +10,8 @@ Arch. Repo may stay private; treat history as if it could become public.
   Prefer over clap or plain `env::args_os()`.
 - `rune` — GPU desktop UI (wgpu/winit), plain Rust views; opened via
   `srcthread desktop`.
-- UniFFI — bind the Rust lib into the Kotlin/Compose Android app.
+- UniFFI — bound inside `ktpackages/srcthread`; Android UI uses Compose
+  `SrcThread` only (no direct UniFFI).
 
 The `srcthread` crate is the only source-of-truth engine. Daemon, CLI, nvim,
 desktop, Android, and MCP call it (in-process or over the socket).
@@ -32,8 +33,10 @@ for the daemon or GUI.
 - `crates/srcthread-cli` — sole PC binary (`src/cli/` mise-shaped)
 - `crates/srcthread-mcp` — MCP **library** (stdio stub)
 - `apps/desktop` — rune desktop **library**
-- `apps/android` — Kotlin + Jetpack Compose; UniFFI to Rust
+- `ktpackages/srcthread` — Kotlin Android library; UniFFI + `SrcThread` facade
+- `apps/android` — Kotlin + Jetpack Compose UI (depends on kt package)
 - `nvim/` — Neovim plugin (picker / open-at-line)
+- Gradle root + `detekt.yaml` sit next to `Cargo.toml`
 
 ## Commands
 

@@ -10,11 +10,11 @@
 
 ## Android (Kotlin Compose + UniFFI)
 
-- `apps/android` — Gradle toolchain (not KMP); **Jetpack Compose** UI (not
-  Views).
-- Namespace / `applicationId`: `dev.kbroom.srcthread`.
-- **UniFFI** binds the Rust `srcthread` lib for on-device store open/create/read
-  without requiring the PC daemon.
+- Gradle root + `detekt.yaml` live at the repo root (next to `Cargo.toml`).
+- `ktpackages/srcthread` — Android library: UniFFI bindgen/NDK on `preBuild`,
+  Compose-aware `SrcThread` / `SrcThreadFfi` facade (hides callbacks).
+- `apps/android` — Compose UI only; depends on `:ktpackages:srcthread` (not
+  UniFFI directly). Namespace / `applicationId`: `dev.kbroom.srcthread`.
 - Capture notes/refs/excerpts on the go; sync later via git or peer transfer.
 - CI does **not** require Android SDK in the default matrix.
 

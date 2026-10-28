@@ -13,7 +13,5 @@ local.properties
 
 .rumdl_cache/
 
-# UniFFI native libs (regenerate via mise run android-uniffi)
-apps/android/app/src/main/jniLibs/
-# Generated Kotlin bindings are committed for a bootstrappable APK build;
-# regenerate with ./gradlew bootstrapUniffi when the Rust UniFFI surface changes.
+# UniFFI native libs (built by :ktpackages:srcthread preBuild / cargo ndk)
+ktpackages/srcthread/src/main/jniLibs/
