@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+#MISE description="Build, install, and launch the Android app on emulator and/or device"
+#USAGE flag "--emulator" help="Target reachable emulators only (fail if none)"
+#USAGE flag "--device" help="Target reachable physical devices only (fail if none)"
+#USAGE flag "--force" help="Allow installing over a higher versionCode (pm -d)"
+set -euo pipefail
+
+apk="apps/android/build/outputs/apk/debug/android-debug.apk"
+# Debug APK uses applicationIdSuffix=.dev (side-by-side with non-dev installs).
+activity="dev.kbroom.srcthread.dev/dev.kbroom.srcthread.MainActivity"
+
+want_emulator="${usage_emulator:-false}"
+want_device="${usage_device:-false}"
+force="${usage_force:-false}"
+# Neither flag → infer both kinds that are currently reachable.
+if [ "$want_emulator" != "true" ] && [ "$want_device" != "true" ]; then
+  want_emulator=true
+  want_device=true
+  infer=true
+else
+  infer=false
+fi
+
+install_opts=()
+if [ "$force" = "true" ]; then
+  install_opts+=(--install-options=-d)
+fi
+
+online_serials() {
+  adb devices | awk 'NR>1 && $2=="device" {print $1}'
+}
+
+emulators=()
+devices=()
+while IFS= read -r serial; do
+  [ -z "$serial" ] && continue
+  case "$serial" in
+    emulator-*) emulators+=("$serial") ;;
+    *) devices+=("$serial") ;;
+  esac
+done < <(online_serials)
+
+# Optional handset pin (ignored for emulators).
+pinned="${SRCTHREAD_ANDROID_SERIAL:-${ANDROID_SERIAL:-}}"
+if [ -n "$pinned" ]; then
+  filtered=()
+  for serial in "${devices[@]+"${devices[@]}"}"; do
+    if [ "$serial" = "$pinned" ]; then
+      filtered+=("$serial")
+    fi
+  done
+  devices=("${filtered[@]+"${filtered[@]}"}")
+fi
+
+targets=()
+if [ "$want_emulator" = "true" ]; then
+  if [ "${#emulators[@]}" -eq 0 ]; then
+    if [ "$infer" = "true" ]; then
+      :
+    else
+      echo "No reachable Android emulator (adb status=device)" >&2
+      exit 1
+    fi
+  else
+    targets+=("${emulators[@]}")
+  fi
+fi
+if [ "$want_device" = "true" ]; then
+  if [ "${#devices[@]}" -eq 0 ]; then
+    if [ "$infer" = "true" ]; then
+      :
+    else
+      if [ -n "$pinned" ]; then
+        echo "Pinned device $pinned is not reachable (adb status=device)" >&2
+      else
+        echo "No reachable physical Android device (adb status=device)" >&2
+      fi
+      exit 1
+    fi
+  else
+    targets+=("${devices[@]}")
+  fi
+fi
+
+if [ "${#targets[@]}" -eq 0 ]; then
+  echo "No reachable Android emulator or physical device" >&2
+  exit 1
+fi
+
+echo "Targets: ${targets[*]}"
+./gradlew :apps:android:assembleDebug
+
+for serial in "${targets[@]}"; do
+  echo "Installing on $serial"
+  android install --device="$serial" --apks "$apk" "${install_opts[@]+"${install_opts[@]}"}"
+  adb -s "$serial" shell am start -n "$activity"
+done

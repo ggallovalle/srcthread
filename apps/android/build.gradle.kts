@@ -18,8 +18,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "srcthread (dev)")
+        }
         release {
             isMinifyEnabled = false
+            resValue("string", "app_name", "srcthread")
             // Personal releases: sign with the debug keystore until a
             // release keystore is wired via env / CI secrets.
             signingConfig = signingConfigs.getByName("debug")

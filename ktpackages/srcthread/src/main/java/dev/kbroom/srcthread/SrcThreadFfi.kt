@@ -5,16 +5,18 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import dev.kbroom.srcthread.uniffi.HostCallbacks
-import dev.kbroom.srcthread.uniffi.hello
-import dev.kbroom.srcthread.uniffi.listThreads
-import dev.kbroom.srcthread.uniffi.setHostCallbacks
-import dev.kbroom.srcthread.uniffi.createThread as uniffiCreateThread
+import java.io.Closeable
+import dev.kbroom.srcthread.uniffi.SrcthreadFfi as NativeSrcthreadFfi
 
 /**
- * [SrcThread] backed by UniFFI. Registers host callbacks so Rust mutations
- * refresh [threads] / [greeting] as Compose [State].
+ * [SrcThread] backed by a per-instance UniFFI handle. Registers host callbacks
+ * so Rust mutations refresh [threads] / [greeting] as Compose [State].
+ *
+ * Call [close] (or let [rememberSrcThread] dispose) to destroy the native
+ * handle when the instance is no longer needed.
  */
-class SrcThreadFfi : SrcThread {
+class SrcThreadFfi : SrcThread, Closeable {
+    private val native = NativeSrcthreadFfi()
     private val greetingState: MutableState<String> = mutableStateOf(DefaultGreeting)
     private val threadsState: MutableState<List<String>> = mutableStateOf(emptyList())
 
@@ -23,7 +25,7 @@ class SrcThreadFfi : SrcThread {
 
     init {
         runCatching {
-            setHostCallbacks(
+            native.setHostCallbacks(
                 object : HostCallbacks {
                     override fun onThreadsChanged(threads: List<String>) {
                         threadsState.value = threads
@@ -34,16 +36,20 @@ class SrcThreadFfi : SrcThread {
                     }
                 },
             )
-            greetingState.value = hello()
-            threadsState.value = listThreads()
+            greetingState.value = native.hello()
+            threadsState.value = native.listThreads()
         }.onFailure { err ->
             Log.w(TAG, "native engine unavailable", err)
         }
     }
 
     override fun createThread(id: String) {
-        runCatching { uniffiCreateThread(id) }
+        runCatching { native.createThread(id) }
             .onFailure { err -> Log.w(TAG, "createThread failed", err) }
+    }
+
+    override fun close() {
+        native.close()
     }
 
     companion object {

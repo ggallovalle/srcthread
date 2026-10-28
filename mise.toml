@@ -68,8 +68,14 @@ run = "scripts/release-assets.sh"
 description = "Run Android detekt (ktlint wrapper) via Gradle"
 dir = "{{config_root}}"
 run = """
-if [ -z "${ANDROID_HOME:-}${ANDROID_SDK_ROOT:-}" ]; then
-  echo "skip detekt (no Android SDK)"
+# CI is Rust-only; GHA may set ANDROID_HOME to a partial SDK that breaks Gradle.
+if [ "${CI:-}" = "true" ]; then
+  echo "skip detekt (CI)"
+  exit 0
+fi
+sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [ -z "$sdk" ] || [ ! -d "$sdk/platforms" ]; then
+  echo "skip detekt (no usable Android SDK)"
   exit 0
 fi
 ./gradlew :apps:android:detekt :ktpackages:srcthread:detekt
@@ -81,11 +87,4 @@ run = [
   "android emulator start ${SRCTHREAD_AVD:-Pixel_9_API_37.2}",
 ]
 
-[tasks."android-start"]
-description = "Build, install, and launch the Android app via android CLI"
-dir = "{{config_root}}"
-run = [
-  "./gradlew :apps:android:assembleDebug",
-  "android install --apks apps/android/build/outputs/apk/debug/android-debug.apk",
-  "adb shell am start -n dev.kbroom.srcthread/.MainActivity",
-]
+# android-start lives in mise/tasks/android-start (file task with --emulator/--device).
