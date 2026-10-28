@@ -112,7 +112,7 @@ cmd anchor subcommand_required=#true help="Anchors into mirrored source at a pin
         flag --thread help="Thread id" required=#true {
             arg <THREAD>
         }
-        flag --repo help="Upstream repo URL or mirror id" required=#true {
+        flag --repo help="Mirror id (must exist in [mirrors] unless already a known id string)" required=#true {
             arg <REPO>
         }
         flag --sha help="Pinned commit SHA" required=#true {
@@ -126,6 +126,9 @@ cmd anchor subcommand_required=#true help="Anchors into mirrored source at a pin
         }
         flag --symbol help="Optional symbol name (e.g. op_get_env)" {
             arg <SYMBOL>
+        }
+        flag --id help="Optional explicit anchor id" {
+            arg <ID>
         }
         flag "-h --help" help="Print help" action=help builtin=#true
     }
@@ -151,8 +154,20 @@ cmd excerpt subcommand_required=#true help="Offline frozen excerpts around ancho
         flag --anchor help="Anchor id to excerpt" required=#true {
             arg <ANCHOR>
         }
-        flag --context help="Context lines before/after" default="10" {
+        flag --context help="Context lines before/after when reading from a local mirror" default="10" {
             arg <CONTEXT>
+        }
+        flag --thread help="Thread id (default: thread that owns the anchor)" {
+            arg <THREAD>
+        }
+        flag --body-file help="Offline body file when the mirror clone is absent" {
+            arg <BODY_FILE>
+        }
+        flag --lang help="Fence language (default: guessed from anchor path, else text)" {
+            arg <LANG>
+        }
+        flag --id help="Explicit excerpt id" {
+            arg <ID>
         }
         flag "-h --help" help="Print help" action=help builtin=#true
     }
@@ -172,6 +187,15 @@ cmd ref subcommand_required=#true help="External refs (PR, issue, doc, chat)" {
         }
         flag --file help="Optional local transcript / note path to ingest" {
             arg <FILE>
+        }
+        flag --kind help="Ref kind (default: inferred from URL, else other)" {
+            arg <KIND>
+        }
+        flag --title help="Display title" {
+            arg <TITLE>
+        }
+        flag --id help="Explicit ref id" {
+            arg <ID>
         }
         flag "-h --help" help="Print help" action=help builtin=#true
     }
