@@ -1,0 +1,13 @@
+[package]
+name = "srcthread-mcp"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+description = "MCP server for srcthread (stdio stub)"
+license.workspace = true
+
+[[bin]]
+name = "srcthread-mcp"
+path = "src/main.rs"
+
+[dependencies]

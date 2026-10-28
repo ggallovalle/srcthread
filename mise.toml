@@ -1,0 +1,55 @@
+[tools]
+# GitHub Actions runners default rustup to `minimal` (no rustfmt/clippy).
+# Pin components so `mise run check-ci` works the same locally and in CI.
+rust = { version = "1.99.0", components = "rustfmt,clippy" }
+hk = "2.8.1"
+rumdl = "0.2.79"
+tombi = "1.9.1"
+
+[env]
+CARGO_TARGET_DIR = "{{config_root}}/target"
+
+[tasks.lint]
+description = "Format and static checks only (no tests; TDD-red friendly)"
+run = "hk run lint --all"
+
+# Same checks as `lint`, but calls the tools directly — no hk, no git status /
+# tracked-file selection. Useful when the tree is dirty or files are untracked.
+[tasks.lint-all]
+description = "Lint/format-check the whole tree (no hk; ignores git state)"
+run = [
+  "cargo fmt --check --all",
+  "mise run clippy-ci",
+  "rumdl fmt --check --diff .",
+  "rumdl check .",
+  "tombi format --quiet --check --diff .",
+]
+
+# CI cargo matrix: Rust workspace only.
+# Skips android/desktop GUI (no Android SDK / Wayland GUI in CI).
+[tasks."clippy-ci"]
+description = "Clippy the Rust workspace (no android/desktop GUI)"
+run = [
+  "cargo clippy --workspace --all-targets -- -D warnings",
+]
+
+[tasks."test-ci"]
+description = "Test the Rust workspace (no android/desktop GUI)"
+run = [
+  "cargo test --workspace",
+]
+
+[tasks."check-ci"]
+description = "What GitHub Actions runs: lint (incl. clippy-ci) + test-ci"
+run = [
+  "hk run lint --all",
+  "mise run test-ci",
+]
+
+[tasks.check]
+description = "Full gate (same as check-ci / GitHub Actions)"
+run = "mise run check-ci"
+
+[tasks."pre-commit"]
+description = "Run the hk pre-commit hook (lint/format only)"
+run = "hk run pre-commit"

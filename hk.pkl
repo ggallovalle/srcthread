@@ -1,0 +1,71 @@
+amends "package://github.com/jdx/hk/releases/download/v2.8.1/hk@2.8.1#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.8.1/hk@2.8.1#/Builtins.pkl"
+
+min_hk_version = "2.8.1"
+
+local rustFiles = List("**/*.rs", "Cargo.toml", "Cargo.lock")
+
+// Builtins: cargo fmt (with fix) and clippy, tightened to deny warnings.
+local cargoFmt = Builtins.cargo_fmt
+
+// CI cargo matrix lives in mise (`clippy-ci` / `test-ci`): one source of truth
+// for which packages GitHub Actions builds. Custom step (not
+// Builtins.cargo_clippy) so we do not fan out once per Cargo.toml.
+local clippy = new Step {
+  glob = rustFiles
+  depends = "cargo_fmt"
+  check = "mise run clippy-ci"
+  fix = "cargo clippy --workspace --fix --allow-dirty --allow-staged --all-targets -- -D warnings"
+}
+
+local test = new Step {
+  glob = rustFiles
+  depends = List("cargo_fmt", "clippy")
+  check = "mise run test-ci"
+}
+
+// Builtins: rumdl formatting, then its lint rules.
+local rumdlFormat = Builtins.rumdl_format
+
+local rumdlLint = new Step {
+  types = List("markdown")
+  depends = "rumdl_format"
+  check = "rumdl check {{files}}"
+  fix = "rumdl check --fix {{files}}"
+}
+
+local tombi = Builtins.tombi_format
+
+// Formatters and static checks only. Safe during a TDD red pass.
+local lintSteps = new Mapping<String, Step> {
+  ["cargo_fmt"] = cargoFmt
+  ["clippy"] = clippy
+  ["rumdl_format"] = rumdlFormat
+  ["rumdl_lint"] = rumdlLint
+  ["tombi_format"] = tombi
+}
+
+hooks {
+  // `mise run lint` / `hk run lint --all`
+  ["lint"] {
+    steps = lintSteps
+  }
+
+  // Prefer `mise run check-ci` (what GHA runs). `hk check --all` stays as a
+  // local equivalent that shares the same clippy-ci / test-ci tasks.
+  ["check"] {
+    steps {
+      ...lintSteps
+      ["test"] = test
+    }
+  }
+
+  // Commits: lint/format only so intentional failing tests can be committed.
+  // Full `check` (including tests) is enforced by CI on PRs into main.
+  ["pre-commit"] {
+    fix = true
+    stage = true
+    stash = "git"
+    steps = lintSteps
+  }
+}

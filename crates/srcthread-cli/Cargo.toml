@@ -1,0 +1,17 @@
+[package]
+name = "srcthread-cli"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+description = "CLI for srcthread research threads"
+license.workspace = true
+
+[[bin]]
+name = "srcthread"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+srcthread = { workspace = true }
+usage-rs = { workspace = true }

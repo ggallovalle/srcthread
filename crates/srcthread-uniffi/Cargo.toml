@@ -1,0 +1,22 @@
+[package]
+name = "srcthread-uniffi"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+description = "UniFFI cdylib bindings for srcthread (Android / future mobile)"
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "srcthread_uniffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+srcthread = { workspace = true }
+uniffi = { workspace = true, features = ["cli"] }
+
+[build-dependencies]
+uniffi = { workspace = true, features = ["build"] }
