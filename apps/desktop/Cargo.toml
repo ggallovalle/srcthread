@@ -1,6 +1,6 @@
 [package]
 name = "srcthread-desktop"
-version = "0.1.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "Rune desktop UI for srcthread (entered via `srcthread desktop`)"

@@ -1,6 +1,6 @@
 [package]
 name = "srcthread"
-version = "0.1.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "Source-of-truth engine for srcthread (daemon/CLI/UI call this library)"

@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""Bump the lockstep product version: workspace Cargo.toml + Android.
+
+Usage:
+  scripts/bump-version.py <X.Y.Z>
+  scripts/bump-version.py patch|minor|major
+
+Does not commit. Run before scripts/publish-release.sh <version>.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CARGO_TOML = ROOT / "Cargo.toml"
+ANDROID_GRADLE = ROOT / "apps" / "android" / "build.gradle.kts"
+
+SEMVER_RE = re.compile(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$")
+WORKSPACE_PACKAGE_RE = re.compile(
+    r"(?ms)^\[workspace\.package\].*?(?=^\[|\Z)",
+)
+WORKSPACE_VERSION_RE = re.compile(r'(?m)^version\s*=\s*"([^"]*)"')
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(msg, file=sys.stderr)
+    raise SystemExit(code)
+
+
+def parse_semver(text: str) -> tuple[int, int, int]:
+    m = SEMVER_RE.fullmatch(text)
+    if not m:
+        die(f"version must be X.Y.Z digits (got {text!r})")
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+
+def format_semver(parts: tuple[int, int, int]) -> str:
+    return f"{parts[0]}.{parts[1]}.{parts[2]}"
+
+
+def version_code(parts: tuple[int, int, int]) -> int:
+    major, minor, patch = parts
+    return major * 10000 + minor * 100 + patch
+
+
+def read_workspace_version(cargo_toml: Path) -> str:
+    text = cargo_toml.read_text()
+    block = WORKSPACE_PACKAGE_RE.search(text)
+    if not block:
+        die("could not find [workspace.package] in Cargo.toml")
+    m = WORKSPACE_VERSION_RE.search(block.group(0))
+    if not m:
+        die("could not find [workspace.package] version in Cargo.toml")
+    return m.group(1)
+
+
+def bump_semver(current: str, kind: str) -> str:
+    major, minor, patch = parse_semver(current)
+    if kind == "major":
+        major, minor, patch = major + 1, 0, 0
+    elif kind == "minor":
+        minor, patch = minor + 1, 0
+    elif kind == "patch":
+        patch += 1
+    else:
+        die(f"unknown bump kind: {kind}")
+    return format_semver((major, minor, patch))
+
+
+def write_workspace_version(cargo_toml: Path, version: str) -> None:
+    text = cargo_toml.read_text()
+
+    def repl(m: re.Match[str]) -> str:
+        block = m.group(0)
+        if WORKSPACE_VERSION_RE.search(block):
+            return WORKSPACE_VERSION_RE.sub(
+                f'version = "{version}"',
+                block,
+                count=1,
+            )
+        return re.sub(
+            r"(?m)^(\[workspace\.package\]\n)",
+            rf'\1version = "{version}"\n',
+            block,
+            count=1,
+        )
+
+    new, n = WORKSPACE_PACKAGE_RE.subn(repl, text, count=1)
+    if n != 1:
+        die("failed to update [workspace.package] version")
+    cargo_toml.write_text(new)
+
+
+def write_android_version(gradle: Path, version: str, code: int) -> None:
+    text = gradle.read_text()
+    text, n1 = re.subn(
+        r'(?m)^(\s*)versionName\s*=\s*"[^"]*"',
+        rf'\1versionName = "{version}"',
+        text,
+        count=1,
+    )
+    text, n2 = re.subn(
+        r"(?m)^(\s*)versionCode\s*=\s*\d+",
+        rf"\1versionCode = {code}",
+        text,
+        count=1,
+    )
+    if n1 != 1 or n2 != 1:
+        die(
+            "failed to update Android version "
+            f"(versionName={n1}, versionCode={n2})"
+        )
+    gradle.write_text(text)
+
+
+def main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Bump lockstep product version "
+            "(workspace Cargo.toml + Android versionName/versionCode)."
+        ),
+    )
+    parser.add_argument(
+        "target",
+        help="X.Y.Z, or one of: patch, minor, major",
+    )
+    args = parser.parse_args(argv)
+
+    if not CARGO_TOML.is_file():
+        die(f"missing {CARGO_TOML}")
+    if not ANDROID_GRADLE.is_file():
+        die(f"missing {ANDROID_GRADLE}")
+
+    current = read_workspace_version(CARGO_TOML)
+    target = args.target
+    if target in ("patch", "minor", "major"):
+        version = bump_semver(current, target)
+    else:
+        parse_semver(target)  # validate
+        version = target
+
+    parts = parse_semver(version)
+    code = version_code(parts)
+
+    write_workspace_version(CARGO_TOML, version)
+    write_android_version(ANDROID_GRADLE, version, code)
+
+    print(f"bumped {current} -> {version} (Android versionCode={code})")
+    print(f"  {CARGO_TOML.relative_to(ROOT)}")
+    print(f"  {ANDROID_GRADLE.relative_to(ROOT)}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

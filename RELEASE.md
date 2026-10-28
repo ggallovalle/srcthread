@@ -15,20 +15,24 @@ Design notes: [plans/06-packaging.md](plans/06-packaging.md),
 - Version in `crates/srcthread-cli/Cargo.toml` (and sibling crates) already
   bumped to the version you will publish — the script refuses a mismatch
 - Optional:
-  - `PACKSLIP_KEY` — path to a packslip secret key (`packslip keygen`);
-    without it the GitHub release still ships, but packslip signing is
-    skipped
-  - `packslip` on `PATH` (or mise) when signing
+  - `PACKSLIP_KEY` — **required** for a real publish (must be
+    `export`ed). Path to a packslip secret key (`packslip keygen`)
+  - `packslip` on `PATH` (or mise / `PACKSLIP_BIN`)
   - `ANDROID_HOME` / `ANDROID_SDK_ROOT` for the release APK
   - Extra `rustup` targets if you want more than the host triple
 
 ## Bump the version
 
-Set every crate / app `version` you ship to the same semver (today they
-are kept in lockstep, e.g. `0.1.0`). Commit on `main` before publishing.
+Rust crates share `[workspace.package] version`; Android `versionName` /
+`versionCode` stay in lockstep via:
 
 ```sh
-# example: confirm what publish will require
+scripts/bump-version.py 0.1.1          # or: patch | minor | major
+```
+
+Commit on `main` before publishing. Confirm what publish will require:
+
+```sh
 cargo metadata --no-deps --format-version 1 | python3 -c '
 import json, sys
 d = json.load(sys.stdin)
@@ -58,7 +62,7 @@ Useful flags:
 ## Publish
 
 ```sh
-export PACKSLIP_KEY=/path/to/packslip.key   # optional but preferred
+export PACKSLIP_KEY=/path/to/packslip.key   # required; assign alone is not enough
 
 scripts/publish-release.sh 0.1.0
 # first machine / smoke: add --host-only
@@ -72,8 +76,8 @@ The script will:
 4. Write `dist/SHASUMS256.txt`
 5. Create annotated tag `v<ver>`, push it, and `gh release create` with
    everything in `dist/`
-6. If `PACKSLIP_KEY` is set, run `packslip create` and upload
-   `packslip.sigstore.json`
+6. Run `packslip create` and upload `packslip.sigstore.json` (fails if
+   `PACKSLIP_KEY` is missing or not a file)
 
 Cross-OS triples are skipped when this host cannot build them (e.g. no
 Darwin archives from Linux). For a full matrix, run the script once per
@@ -135,5 +139,5 @@ Prefer `publish-release.sh`. For debugging a single step:
 1. Version bumped and on `main`
 2. `mise run check-ci` (or rely on green CI on `main`)
 3. Dry-run with `--host-only`
-4. Real publish (with `PACKSLIP_KEY` if you want mise install)
+4. Real publish with `export PACKSLIP_KEY=...`
 5. Spot-check the GitHub release assets and a packslip / APK install

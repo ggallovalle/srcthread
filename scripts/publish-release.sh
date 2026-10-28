@@ -6,8 +6,9 @@
 #   scripts/publish-release.sh <version> [--dry-run] [--skip-android] [--skip-desktop] [--host-only]
 #
 # Env:
-#   PACKSLIP_KEY   Path to a packslip secret key (from `packslip keygen`).
-#                  If unset, packslip signing is skipped with a note.
+#   PACKSLIP_KEY   Required (must be exported). Path to a packslip secret
+#                  key from `packslip keygen`.
+#   PACKSLIP_BIN   Optional path to the packslip CLI (else PATH / mise).
 #   HOST_TRIPLE    Override rustc host triple for --host-only builds.
 #
 # Deactivated GHA: `.github/workflows/release.yml` (workflow_dispatch only).
@@ -190,41 +191,47 @@ if [[ -z "$PACKSLIP_BIN" ]]; then
 fi
 
 if [[ -z "${PACKSLIP_KEY:-}" ]]; then
-	echo "PACKSLIP_KEY unset — skipping packslip.sigstore.json"
-	echo "Generate a key with: mise exec packslip -- packslip keygen"
-	echo "Or dispatch .github/workflows/release.yml after enabling packslip there."
-elif [[ -z "$PACKSLIP_BIN" ]]; then
-	echo "packslip CLI not found — skipping packslip.sigstore.json"
-else
-	url_base="https://github.com/ggallovalle/srcthread/releases/download/${TAG}"
-	create_args=(
-		--project github.com/ggallovalle/srcthread
-		--version "$VERSION"
-		--bin srcthread
-		--url-base "$url_base"
-		--out dist
-		--key "$PACKSLIP_KEY"
-		--no-log
-		--resource "cli-spec/usage=asset:dist/srcthread.usage.kdl"
-		--resource "completion/bash=asset:dist/srcthread.bash"
-		--resource "completion/zsh=asset:dist/srcthread.zsh"
-		--resource "completion/fish=asset:dist/srcthread.fish"
-		--resource "completion/powershell=asset:dist/srcthread.powershell"
-		--resource "man@linux=archive:srcthread/man/man1/srcthread.1"
-		--resource "man@darwin=archive:srcthread/man/man1/srcthread.1"
-	)
-	artifact_args=()
-	for f in dist/srcthread-"${VERSION}"-*.tar.gz; do
-		base="$(basename "$f")"
-		if [[ "$base" == *"-desktop.tar.gz" ]]; then
-			artifact_args+=("${f}@desktop")
-		else
-			artifact_args+=("$f")
-		fi
-	done
-	"$PACKSLIP_BIN" create "${create_args[@]}" "${artifact_args[@]}"
-	gh release upload "$TAG" dist/packslip.sigstore.json --clobber
+	echo "PACKSLIP_KEY is not set in the environment (export it, don't only assign)." >&2
+	echo "  export PACKSLIP_KEY=/path/to/packslip.key" >&2
+	echo "Generate a key with: packslip keygen" >&2
+	exit 1
 fi
+if [[ ! -f "$PACKSLIP_KEY" ]]; then
+	echo "PACKSLIP_KEY does not exist: $PACKSLIP_KEY" >&2
+	exit 1
+fi
+if [[ -z "$PACKSLIP_BIN" ]]; then
+	echo "packslip CLI not found (install packslip or set PACKSLIP_BIN)" >&2
+	exit 1
+fi
+
+url_base="https://github.com/ggallovalle/srcthread/releases/download/${TAG}"
+create_args=(
+	--project github.com/ggallovalle/srcthread
+	--version "$VERSION"
+	--bin srcthread
+	--url-base "$url_base"
+	--out dist
+	--key "$PACKSLIP_KEY"
+	--resource "cli-spec/usage=asset:dist/srcthread.usage.kdl"
+	--resource "completion/bash=asset:dist/srcthread.bash"
+	--resource "completion/zsh=asset:dist/srcthread.zsh"
+	--resource "completion/fish=asset:dist/srcthread.fish"
+	--resource "completion/powershell=asset:dist/srcthread.powershell"
+	--resource "man@linux=archive:srcthread/man/man1/srcthread.1"
+	--resource "man@darwin=archive:srcthread/man/man1/srcthread.1"
+)
+artifact_args=()
+for f in dist/srcthread-"${VERSION}"-*.tar.gz; do
+	base="$(basename "$f")"
+	if [[ "$base" == *"-desktop.tar.gz" ]]; then
+		artifact_args+=("${f}@desktop")
+	else
+		artifact_args+=("$f")
+	fi
+done
+"$PACKSLIP_BIN" create "${create_args[@]}" "${artifact_args[@]}"
+gh release upload "$TAG" dist/packslip.sigstore.json --clobber
 
 cat <<EOF
 

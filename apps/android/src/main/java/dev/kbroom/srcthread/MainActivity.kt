@@ -43,6 +43,10 @@ private fun HelloScreen(engine: SrcThread = rememberSrcThread()) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text(
+            text = "srcthread ${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.labelMedium,
+        )
         Text(text = greeting, style = MaterialTheme.typography.headlineMedium)
         Text(
             text = "threads: ${threads.joinToString()}",

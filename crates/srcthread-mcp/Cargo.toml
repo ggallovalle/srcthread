@@ -1,6 +1,6 @@
 [package]
 name = "srcthread-mcp"
-version = "0.1.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "MCP server library for srcthread via the official rmcp SDK (entered via `srcthread mcp`)"

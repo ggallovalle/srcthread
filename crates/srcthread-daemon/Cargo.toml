@@ -1,6 +1,6 @@
 [package]
 name = "srcthread-daemon"
-version = "0.1.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "Unix-socket NDJSON daemon library for srcthread (entered via `srcthread daemon`)"

@@ -1,6 +1,6 @@
 [package]
 name = "srcthread-uniffi"
-version = "0.1.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "UniFFI cdylib bindings for srcthread (Android / future mobile)"
