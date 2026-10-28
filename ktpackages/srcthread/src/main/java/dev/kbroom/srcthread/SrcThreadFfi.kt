@@ -5,10 +5,10 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import dev.kbroom.srcthread.uniffi.HostCallbacks
-import dev.kbroom.srcthread.uniffi.createThread as uniffiCreateThread
 import dev.kbroom.srcthread.uniffi.hello
 import dev.kbroom.srcthread.uniffi.listThreads
 import dev.kbroom.srcthread.uniffi.setHostCallbacks
+import dev.kbroom.srcthread.uniffi.createThread as uniffiCreateThread
 
 /**
  * [SrcThread] backed by UniFFI. Registers host callbacks so Rust mutations
