@@ -5,7 +5,8 @@
 set -euo pipefail
 
 apk="apps/android/build/outputs/apk/debug/android-debug.apk"
-activity="dev.kbroom.srcthread/.MainActivity"
+# Debug APK uses applicationIdSuffix=.dev (side-by-side with non-dev installs).
+activity="dev.kbroom.srcthread.dev/dev.kbroom.srcthread.MainActivity"
 
 want_emulator="${usage_emulator:-false}"
 want_device="${usage_device:-false}"

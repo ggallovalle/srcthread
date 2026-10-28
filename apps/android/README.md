@@ -16,8 +16,12 @@ run automatically on `:ktpackages:srcthread` `preBuild`.
 ## What’s here
 
 - Compose `MainActivity` (`dev.kbroom.srcthread`)
-- `applicationId` / `namespace`: `dev.kbroom.srcthread`
-- detekt + ktlint-wrapper (repo-root `detekt.yaml`; also via
+- `namespace`: `dev.kbroom.srcthread`
+- Debug/`android-start`: package `dev.kbroom.srcthread.dev`, label
+  `srcthread (dev)`, Linux-matching ship-badge launcher (side-by-side with
+  a non-dev install)
+- Release: package `dev.kbroom.srcthread`, label `srcthread`, unbadged icon
+- detekt + ktlint-wrapper (repo-root `detekt.yaml`; also
   `mise run detekt` / hk)
 - `minSdk` 26, `compileSdk` 35
 
@@ -32,8 +36,10 @@ mise run android-start --emulator --device  # both kinds required
 ```
 
 With no flags, any online emulator and/or handset is used (at least one
-required). Override the AVD with `SRCTHREAD_AVD=medium_phone`. Pin a handset
-with `SRCTHREAD_ANDROID_SERIAL=<serial>` (or `ANDROID_SERIAL`).
+required). Installs the debug/dev package (`dev.kbroom.srcthread.dev`) so it
+sits beside a non-dev install. Override the AVD with
+`SRCTHREAD_AVD=medium_phone`. Pin a handset with
+`SRCTHREAD_ANDROID_SERIAL=<serial>` (or `ANDROID_SERIAL`).
 
 Default AVD `Pixel_9_API_37.2` needs host keyboard support so the
 emulator sidebar Home / Back / Recents buttons inject keys:
