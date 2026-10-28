@@ -2,6 +2,7 @@
 #MISE description="Build, install, and launch the Android app on emulator and/or device"
 #USAGE flag "--emulator" help="Target reachable emulators only (fail if none)"
 #USAGE flag "--device" help="Target reachable physical devices only (fail if none)"
+#USAGE flag "--force" help="Allow installing over a higher versionCode (pm -d)"
 set -euo pipefail
 
 apk="apps/android/build/outputs/apk/debug/android-debug.apk"
@@ -10,6 +11,7 @@ activity="dev.kbroom.srcthread.dev/dev.kbroom.srcthread.MainActivity"
 
 want_emulator="${usage_emulator:-false}"
 want_device="${usage_device:-false}"
+force="${usage_force:-false}"
 # Neither flag → infer both kinds that are currently reachable.
 if [ "$want_emulator" != "true" ] && [ "$want_device" != "true" ]; then
   want_emulator=true
@@ -17,6 +19,11 @@ if [ "$want_emulator" != "true" ] && [ "$want_device" != "true" ]; then
   infer=true
 else
   infer=false
+fi
+
+install_opts=()
+if [ "$force" = "true" ]; then
+  install_opts+=(--install-options=-d)
 fi
 
 online_serials() {
@@ -85,6 +92,6 @@ echo "Targets: ${targets[*]}"
 
 for serial in "${targets[@]}"; do
   echo "Installing on $serial"
-  android install --device="$serial" --apks "$apk"
+  android install --device="$serial" --apks "$apk" "${install_opts[@]+"${install_opts[@]}"}"
   adb -s "$serial" shell am start -n "$activity"
 done

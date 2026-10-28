@@ -33,11 +33,13 @@ mise run android-start                 # assembleDebug → install → launch on
 mise run android-start --emulator      # emulators only (fail if none)
 mise run android-start --device         # physical devices only (fail if none)
 mise run android-start --emulator --device  # both kinds required
+mise run android-start --force         # allow versionCode downgrade (pm -d)
 ```
 
 With no flags, any online emulator and/or handset is used (at least one
 required). Installs the debug/dev package (`dev.kbroom.srcthread.dev`) so it
-sits beside a non-dev install. Override the AVD with
+sits beside a non-dev install. `--force` passes `pm -d` so a local
+`versionCode` 1 can replace a higher on-device build. Override the AVD with
 `SRCTHREAD_AVD=medium_phone`. Pin a handset with
 `SRCTHREAD_ANDROID_SERIAL=<serial>` (or `ANDROID_SERIAL`).
 
