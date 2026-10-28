@@ -25,7 +25,7 @@ _srcthread() {
     cat >| "$spec_file" <<'__USAGE_EOF__'
 name srcthread
 bin srcthread
-version "0.2.0"
+version "0.3.0"
 about "Local-first research threads over pinned source mirrors."
 long_about #"""
 Local-first research threads over pinned source mirrors.

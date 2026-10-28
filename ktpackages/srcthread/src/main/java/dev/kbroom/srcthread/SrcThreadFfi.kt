@@ -1,11 +1,9 @@
 package dev.kbroom.srcthread
 
 import android.util.Log
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import dev.kbroom.srcthread.uniffi.HostCallbacks
 import java.io.Closeable
 import dev.kbroom.srcthread.uniffi.SrcthreadFfi as NativeSrcthreadFfi
@@ -59,7 +57,3 @@ class SrcThreadFfi : SrcThread, Closeable {
         private const val DefaultGreeting = "srcthread"
     }
 }
-
-/** Remember a [SrcThread] backed by the native UniFFI engine for this composition. */
-@Composable
-fun rememberSrcThread(): SrcThread = remember { SrcThreadFfi() }
