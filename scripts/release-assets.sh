@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Generate usage KDL, shell completions, and man page from the CLI.
+#
+# Writes:
+#   srcthread.usage.kdl
+#   completion/srcthread.{bash,fish,ps1} and completion/_srcthread
+#   man/man1/srcthread.1
+#
+# Optional: copy flat completion assets into dist/ for GitHub releases:
+#   DIST=1 scripts/release-assets.sh
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+mkdir -p completion man/man1
+
+# Same CLI surface as CI (no Wayland/Vulkan link deps).
+cargo run -qp srcthread-cli --no-default-features -- __usage_spec__ >srcthread.usage.kdl
+
+usage generate completion bash srcthread -f srcthread.usage.kdl >completion/srcthread.bash
+usage generate completion zsh srcthread -f srcthread.usage.kdl >completion/_srcthread
+usage generate completion fish srcthread -f srcthread.usage.kdl >completion/srcthread.fish
+usage generate completion powershell srcthread -f srcthread.usage.kdl >completion/srcthread.ps1
+
+usage generate manpage -f srcthread.usage.kdl -o man/man1/srcthread.1
+
+if [[ "${DIST:-0}" == "1" ]]; then
+	mkdir -p dist
+	cp -f srcthread.usage.kdl dist/srcthread.usage.kdl
+	cp -f completion/srcthread.bash dist/srcthread.bash
+	cp -f completion/_srcthread dist/srcthread.zsh
+	cp -f completion/srcthread.fish dist/srcthread.fish
+	cp -f completion/srcthread.ps1 dist/srcthread.powershell
+	echo "Staged release assets under dist/"
+fi

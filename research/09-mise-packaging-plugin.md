@@ -66,8 +66,8 @@ SHASUMS256.txt
 packslip.sigstore.json
 ```
 
-Archive root: `srcthread/bin/srcthread` (+ optional `man/`, LICENSE,
-README). One compression for v1 is enough.
+Archive root: `srcthread/bin/srcthread`, `man/man1/srcthread.1`, LICENSE,
+README. Completions stay out of the archive. One compression for v1.
 
 Release scripts: mise’s `scripts/build-tarball.sh` + `scripts/release.sh`
 shape — gather artifacts, checksums, upload usage/completions, then

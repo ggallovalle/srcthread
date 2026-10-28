@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Write SHASUMS256.txt for staged release artifacts under dist/.
+#
+# Usage:
+#   scripts/checksums.sh [dist-dir]
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DIST="${1:-$ROOT/dist}"
+
+if [[ ! -d "$DIST" ]]; then
+	echo "dist directory not found: $DIST" >&2
+	exit 1
+fi
+
+cd "$DIST"
+# Stable order; skip the checksum file itself if re-run.
+mapfile -t files < <(find . -maxdepth 1 -type f ! -name 'SHASUMS256.txt' | sed 's|^\./||' | sort)
+if [[ ${#files[@]} -eq 0 ]]; then
+	echo "no artifacts in $DIST" >&2
+	exit 1
+fi
+
+sha256sum -- "${files[@]}" >SHASUMS256.txt
+echo "Wrote $DIST/SHASUMS256.txt (${#files[@]} files)"
+cat SHASUMS256.txt

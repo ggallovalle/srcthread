@@ -12,6 +12,7 @@ are intentional.
 | 3 | Neovim | [03-nvim.md](03-nvim.md) |
 | 4 | Desktop + Android | [04-desktop-android.md](04-desktop-android.md) |
 | 5 | MCP | [05-mcp.md](05-mcp.md) |
+| 6 | Packaging / packslip releases | [06-packaging.md](06-packaging.md) |
 
 ## Phase goals (short)
 
@@ -21,6 +22,8 @@ are intentional.
 3. **nvim** — pick thread/anchor, open at line (fff-inspired UX).
 4. **Desktop / Android** — rune browser; phone capture + read offline.
 5. **MCP** — agents read anchors/excerpts without web fetch.
+6. **Packaging** — packslip PC releases (variants, completions, man),
+   `integration` / `desktop install-xdg`, manual publish + Android APK.
 
 Sync (git + peer) and optional RAM index land after the store format is
 stable; see research notes.
