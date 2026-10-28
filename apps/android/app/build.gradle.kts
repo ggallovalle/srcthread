@@ -3,6 +3,7 @@ import java.io.File
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("io.gitlab.arturbosch.detekt")
 }
 
@@ -33,6 +34,10 @@ android {
         jvmTarget = "17"
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
@@ -44,19 +49,22 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     config.setFrom(files("${rootProject.projectDir}/config/detekt.yaml"))
-    source.setFrom(
-        files(
-            "src/main/java",
-            "src/main/kotlin",
-        ),
-    )
+    // Hand-written sources only (skip generated UniFFI under uniffi/).
+    source.setFrom(files("src/main/java/dev/kbroom/srcthread/MainActivity.kt"))
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    implementation(composeBom)
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
     // UniFFI Kotlin runtime (JNA loads libsrcthread_uniffi.so from jniLibs).
     implementation("net.java.dev.jna:jna:5.17.0@aar")
-    detektPlugins("io.gitlab.arturbosch.detekt:detekt-rules-ktlint-wrapper:1.23.8")
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.8")
 }
 
 val repoRoot = rootProject.projectDir.parentFile!!.parentFile!!
@@ -95,6 +103,11 @@ tasks.register<Exec>("generateUniffiKotlin") {
         }
     }
 
+    // Generate under src/main/java so package_name from uniffi.toml lands at
+    // dev/kbroom/srcthread/uniffi/.
+    val javaSrc = File(projectDir, "src/main/java")
+    val uniffiToml = File(repoRoot, "crates/srcthread-uniffi/uniffi.toml")
+
     commandLine(
         "cargo",
         "run",
@@ -109,7 +122,10 @@ tasks.register<Exec>("generateUniffiKotlin") {
         "--language",
         "kotlin",
         "--out-dir",
-        uniffiPackageDir.absolutePath,
+        javaSrc.absolutePath,
+        "--config",
+        uniffiToml.absolutePath,
+        "--no-format",
     )
 }
 

@@ -16,6 +16,7 @@ path = "src/bin/uniffi-bindgen.rs"
 
 [dependencies]
 srcthread = { workspace = true }
+thiserror = { workspace = true }
 uniffi = { workspace = true, features = ["cli"] }
 
 [build-dependencies]

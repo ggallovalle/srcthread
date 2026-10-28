@@ -13,6 +13,7 @@ local.properties
 
 .rumdl_cache/
 
-# UniFFI local outputs (regenerate via ./gradlew bootstrapUniffi / cargoNdkUniffi)
+# UniFFI native libs (regenerate via mise run android-uniffi)
 apps/android/app/src/main/jniLibs/
-apps/android/app/src/main/java/dev/kbroom/srcthread/uniffi/
+# Generated Kotlin bindings are committed for a bootstrappable APK build;
+# regenerate with ./gradlew bootstrapUniffi when the Rust UniFFI surface changes.

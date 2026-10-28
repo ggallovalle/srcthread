@@ -1,52 +1,40 @@
 # srcthread (Android)
 
-Kotlin + Gradle UI that loads the Rust engine via
+Kotlin + Jetpack Compose UI that loads the Rust engine via
 [UniFFI](https://mozilla.github.io/uniffi-rs/) (`crates/srcthread-uniffi`).
+
+Hello-world talks **both ways**:
+
+- Kotlin → Rust: `hello`, `listThreads` (query), `createThread` (mutation)
+- Rust → Kotlin: `HostCallbacks.onLog` / `onThreadsChanged`
 
 ## What’s here
 
-- Single-Activity app (`dev.kbroom.srcthread.MainActivity`)
+- Compose `MainActivity` (`dev.kbroom.srcthread`)
 - `applicationId` / `namespace`: `dev.kbroom.srcthread`
-- UniFFI Kotlin package target: `dev.kbroom.srcthread.uniffi`
-- detekt + ktlint-wrapper config under `config/detekt.yaml`
+- UniFFI package: `dev.kbroom.srcthread.uniffi`
+- detekt + ktlint-wrapper (`config/detekt.yaml`; also via `mise run detekt` / hk)
 - `minSdk` 26, `compileSdk` 35
 
-CI does **not** assume the Android SDK. Build locally when you have
-SDK + JDK installed.
-
-## Build (local)
-
-1. Install Android Studio or command-line SDK + JDK 17+.
-2. From this directory, generate the Gradle wrapper if needed:
-
-   ```sh
-   gradle wrapper --gradle-version 8.10.2
-   ```
-
-3. (Optional) Generate UniFFI Kotlin + host lib:
-
-   ```sh
-   ./gradlew bootstrapUniffi
-   ```
-
-4. (Optional) Cross-compile `.so` into `app/src/main/jniLibs`
-   (needs `cargo-ndk` + Android NDK):
-
-   ```sh
-   ./gradlew cargoNdkUniffi
-   ```
-
-5. Build:
-
-   ```sh
-   ./gradlew :app:assembleDebug
-   ```
-
-Without step 4 the Activity shows a static **srcthread hello** label.
-With the native lib present it calls UniFFI `hello()`.
-
-## Lint
+## mise tasks (android CLI — not sdkmanager)
 
 ```sh
+mise run android-emulator   # android emulator start <avd>
+mise run android-uniffi     # generate Kotlin + NDK .so into jniLibs
+mise run android-start      # android run --activity .MainActivity
+```
+
+Override the AVD with `SRCTHREAD_AVD=medium_phone`.
+
+## Manual build
+
+```sh
+cd apps/android
+./gradlew bootstrapUniffi cargoNdkUniffi
+./gradlew :app:assembleDebug
 ./gradlew detekt
 ```
+
+Needs the `android` CLI on `PATH`, NDK (`android sdk install 'ndk;…'`),
+`cargo-ndk`, and Rust targets `aarch64-linux-android` /
+`x86_64-linux-android`.
