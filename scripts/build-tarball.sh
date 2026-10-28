@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Build a platform tarball for srcthread (mise-shaped layout).
+#
+# Usage:
+#   scripts/build-tarball.sh [rust-triple] [variant]
+#
+# variant: default | desktop  (default: default)
+# Output under dist/:
+#   srcthread-$VER-$os-$arch.tar.gz
+#   srcthread-$VER-$os-$arch-desktop.tar.gz  (when variant=desktop)
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+RUST_TRIPLE="${1:-$(rustc -vV | awk '/^host:/{print $2}')}"
+VARIANT="${2:-default}"
+
+get_os() {
+	case "$RUST_TRIPLE" in
+	*-apple-darwin*) echo macos ;;
+	*-linux-*) echo linux ;;
+	*)
+		echo "unsupported OS in triple: $RUST_TRIPLE" >&2
+		exit 1
+		;;
+	esac
+}
+
+get_arch() {
+	case "$RUST_TRIPLE" in
+	aarch64-*) echo arm64 ;;
+	x86_64-*) echo x64 ;;
+	*)
+		echo "unsupported arch in triple: $RUST_TRIPLE" >&2
+		exit 1
+		;;
+	esac
+}
+
+os="$(get_os)"
+arch="$(get_arch)"
+version="$(cargo metadata --no-deps --format-version 1 |
+	python3 -c "import json,sys; d=json.load(sys.stdin); print([p['version'] for p in d['packages'] if p['name']=='srcthread-cli'][0])")"
+
+case "$VARIANT" in
+default)
+	cargo_args=(--no-default-features)
+	suffix=""
+	;;
+desktop)
+	cargo_args=(--features desktop)
+	suffix="-desktop"
+	;;
+*)
+	echo "unknown variant: $VARIANT (expected default|desktop)" >&2
+	exit 1
+	;;
+esac
+
+basename="srcthread-${version}-${os}-${arch}${suffix}"
+echo "Building $basename ($RUST_TRIPLE, variant=$VARIANT)"
+
+cargo build -p srcthread-cli --release --target "$RUST_TRIPLE" "${cargo_args[@]}"
+
+# Ensure man page exists (from usage spec).
+mkdir -p man/man1
+if [[ ! -f man/man1/srcthread.1 ]]; then
+	./scripts/release-assets.sh
+fi
+
+stage="dist/stage-$basename"
+rm -rf "$stage"
+mkdir -p "$stage/srcthread/bin" "$stage/srcthread/man/man1"
+
+bin_src="target/${RUST_TRIPLE}/release/srcthread"
+if [[ ! -f "$bin_src" ]]; then
+	# Host build may omit the triple directory.
+	bin_src="target/release/srcthread"
+fi
+cp -f "$bin_src" "$stage/srcthread/bin/srcthread"
+chmod +x "$stage/srcthread/bin/srcthread"
+cp -f man/man1/srcthread.1 "$stage/srcthread/man/man1/srcthread.1"
+cp -f README.md "$stage/srcthread/README.md"
+cp -f LICENSE "$stage/srcthread/LICENSE"
+
+mkdir -p dist
+out="dist/${basename}.tar.gz"
+tar_owner_args=(--owner=0 --group=0)
+if tar --version 2>&1 | grep -q '^bsdtar'; then
+	tar_owner_args=(--uid 0 --gid 0 --uname root --gname root)
+fi
+tar "${tar_owner_args[@]}" -C "$stage" -czf "$out" srcthread
+rm -rf "$stage"
+ls -lh "$out"

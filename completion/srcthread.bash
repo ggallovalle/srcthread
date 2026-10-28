@@ -67,7 +67,25 @@ a running instance.
     }
 }
 cmd desktop help="Open the rune desktop UI" {
+    long_help #"""
+Open the rune desktop UI
+
+With no subcommand, launches the desktop. Use `install-xdg` /
+`uninstall-xdg` / `xdg-status` for FreeDesktop launcher and icons.
+"""#
     flag "-h --help" help="Print help" action=help builtin=#true
+    cmd install-xdg help="Install FreeDesktop .desktop entry and icon" {
+        flag --dev help="Install the ship-badged -dev launcher (workspace / shellrc)"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd uninstall-xdg help="Remove FreeDesktop .desktop entry and icon" {
+        flag --dev help="Remove the ship-badged -dev launcher"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd xdg-status help="Show FreeDesktop install status" {
+        flag --dev help="Check the ship-badged -dev launcher"
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
 }
 cmd store help="Manage file-canonical research stores (git vaults)" {
     long_help #"""
@@ -278,6 +296,40 @@ With no subcommand, shows git status (stub).
 cmd mcp help="Run the MCP stdio server (stub)" {
     flag "-h --help" help="Print help" action=help builtin=#true
 }
+cmd integration subcommand_required=#true help="Manage built-in agent MCP integrations" {
+    long_help #"""
+Manage built-in agent MCP integrations
+
+Install, uninstall, or show status for registering `srcthread mcp` in
+coding-agent configs (Cursor, Claude, OpenCode, Codex).
+"""#
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd install help="Install an MCP integration" {
+        flag --user help="Write into the user/home agent config"
+        flag --local help="Write into the project (cwd) agent config"
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <TARGET> help="Agent target: cursor, claude, opencode, or codex"
+        group scope "--user" "--local" required=#true
+    }
+    cmd uninstall help="Uninstall an MCP integration" {
+        flag --user help="Write into the user/home agent config"
+        flag --local help="Write into the project (cwd) agent config"
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <TARGET> help="Agent target: cursor, claude, opencode, or codex"
+        group scope "--user" "--local" required=#true
+    }
+    cmd status help="Show integration status" {
+        long_help #"""
+Show MCP integration status
+
+With no scope flag, prints both user and local for every target.
+"""#
+        flag --user help="Write into the user/home agent config"
+        flag --local help="Write into the project (cwd) agent config"
+        flag "-h --help" help="Print help" action=help builtin=#true
+        group scope "--user" "--local"
+    }
+}
 cmd doctor help="Environment / daemon / store health checks" {
     alias dr
     flag "-h --help" help="Print help" action=help builtin=#true
@@ -291,14 +343,8 @@ __USAGE_EOF__
     # Complete the text before the cursor, as `$cur` holds it: with the cursor in `--out=a|X`
     # the value typed so far is `a`, not `aX`.
     words[cword]="$cur"
-    # One candidate per line, kept as text. `compgen -W` expands every word it is handed
-    # (`$(…)`, globs, quote removal), so a candidate printed by a `run=` completer would have
-    # run as a command here, and `*` would have become the files in the working directory.
-    COMPREPLY=()
-    local __usage_line
-    while IFS= read -r __usage_line; do
-        [[ -n "$__usage_line" && "$__usage_line" == "$cur"* ]] && COMPREPLY+=("$__usage_line")
-    done < <(command usage complete-word --shell bash -f "$spec_file" --cword="$cword" -- "${words[@]}" 2>/dev/null)
+    # shellcheck disable=SC2207
+	COMPREPLY=($(compgen -W "$(command usage complete-word --shell bash -f "$spec_file" --cword="$cword" -- "${words[@]}" 2>/dev/null)" -- "$cur"))
 	# Readline only replaces the text after the last word break, so strip the part of
 	# `$cur` up to its last `:` or `=` from each candidate (what __ltrim_colon_completions
 	# does for `:` alone).

@@ -60,19 +60,9 @@ run = "hk run pre-commit"
 # Dump usage-rs `__usage_spec__` and regenerate shell completions from it.
 # Kept in sync by the hk `render_usage` pre-commit step.
 [tasks."render:usage"]
-description = "Regenerate srcthread.usage.kdl and completion/{bash,zsh,fish,ps1}"
+description = "Regenerate usage KDL, completions, and man page"
 dir = "{{config_root}}"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-mkdir -p completion
-# --no-default-features: same CLI surface, no Wayland/Vulkan link deps (CI-safe).
-cargo run -qp srcthread-cli --no-default-features -- __usage_spec__ > srcthread.usage.kdl
-usage generate completion bash srcthread -f srcthread.usage.kdl > completion/srcthread.bash
-usage generate completion zsh srcthread -f srcthread.usage.kdl > completion/_srcthread
-usage generate completion fish srcthread -f srcthread.usage.kdl > completion/srcthread.fish
-usage generate completion powershell srcthread -f srcthread.usage.kdl > completion/srcthread.ps1
-"""
+run = "scripts/release-assets.sh"
 
 [tasks.detekt]
 description = "Run Android detekt (ktlint wrapper) via Gradle"

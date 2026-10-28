@@ -11,13 +11,20 @@ name = "srcthread"
 path = "src/main.rs"
 
 [dependencies]
+directories = { workspace = true }
+jsonc-parser = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 srcthread = { workspace = true }
 srcthread-daemon = { workspace = true }
 srcthread-desktop = { workspace = true, optional = true }
 srcthread-mcp = { workspace = true }
+toml_edit = { workspace = true }
 usage-rs = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
 
 [features]
 default = ["desktop"]
