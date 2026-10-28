@@ -62,14 +62,13 @@ pub(crate) struct XdgRoots {
 
 impl XdgRoots {
     pub(crate) fn from_env() -> Result<Self, String> {
-        let data_home = std::env::var_os("XDG_DATA_HOME")
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share"))
-            })
-            .ok_or_else(|| "neither XDG_DATA_HOME nor HOME is set".to_string())?;
+        let dirs = directories::BaseDirs::new()
+            .ok_or_else(|| "could not resolve XDG data directory".to_string())?;
         let exe = std::env::current_exe().map_err(|e| format!("current executable: {e}"))?;
-        Ok(Self { data_home, exe })
+        Ok(Self {
+            data_home: dirs.data_dir().to_path_buf(),
+            exe,
+        })
     }
 
     #[cfg(test)]
