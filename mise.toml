@@ -68,8 +68,12 @@ run = "scripts/release-assets.sh"
 description = "Run Android detekt (ktlint wrapper) via Gradle"
 dir = "{{config_root}}"
 run = """
+# CI is Rust-only; GHA may set ANDROID_HOME to a partial SDK that breaks Gradle.
+if [ "${CI:-}" = "true" ]; then
+  echo "skip detekt (CI)"
+  exit 0
+fi
 sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-# GHA often sets ANDROID_HOME without platforms/ — skip unless usable.
 if [ -z "$sdk" ] || [ ! -d "$sdk/platforms" ]; then
   echo "skip detekt (no usable Android SDK)"
   exit 0
