@@ -1,26 +1,27 @@
-# Plan: MCP (last)
+# Plan: MCP
 
-Ship MCP after lib, daemon, CLI, and at least one human UI path work.
+Uses the official Rust SDK
+[`modelcontextprotocol/rust-sdk`](https://github.com/modelcontextprotocol/rust-sdk)
+(`rmcp` on crates.io). Entered via `srcthread mcp` (no separate binary).
 
-## Why last
+## Hello-world tools
 
-Agents are consumers of a stable store + socket. Building MCP first invites
-rework every time the thread model shifts.
+| Tool | Kind | Role |
+| --- | --- | --- |
+| `hello` | query | greeting token |
+| `list_threads` | query | thread ids |
+| `create_thread` | mutation | create a thread id |
 
-## Tools (sketch)
+Transport: stdio (`rmcp::transport::stdio`).
+
+## Later
 
 Expose read-heavy tools so agents use local anchors/excerpts instead of
 web-fetching GitHub:
 
-- `list_threads` / `get_thread`
-- `list_anchors` / `resolve_anchor` (path, sha, line/span)
-- `get_excerpt` — frozen offline body
-- `get_note` / `list_refs`
+- `get_thread` / `list_anchors` / `resolve_anchor`
+- `get_excerpt` / `get_note` / `list_refs`
 - optional `search` against the daemon index
 
-Writes (`add_anchor`, `add_note`) can follow once read tools prove useful.
-
-## Process
-
-Prefer attaching to `srcthread daemon` (same NDJSON) so MCP shares the warm index
-with nvim/CLI. Standalone embed of the lib is a fallback for CI/tests.
+Prefer attaching to `srcthread daemon` (same NDJSON) so MCP shares the warm
+index with nvim/CLI. Standalone embed of the lib remains the hello-world path.

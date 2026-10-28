@@ -3,9 +3,11 @@ name = "srcthread-mcp"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
-description = "MCP server library for srcthread (entered via `srcthread mcp`)"
+description = "MCP server library for srcthread via the official rmcp SDK (entered via `srcthread mcp`)"
 license.workspace = true
 
 [dependencies]
-serde_json = { workspace = true }
+rmcp = { workspace = true }
+serde = { workspace = true }
 srcthread = { workspace = true }
+tokio = { workspace = true }
