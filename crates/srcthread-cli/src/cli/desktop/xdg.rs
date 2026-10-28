@@ -180,18 +180,17 @@ pub(crate) fn status(roots: &XdgRoots, flavor: Flavor) -> Result<(), String> {
 fn rewrite_desktop(template: &str, flavor: Flavor, exe: &str) -> String {
     let mut out = String::new();
     for line in template.lines() {
-        if let Some(rest) = line.strip_prefix("Name=") {
-            let _ = rest;
+        if line.starts_with("Name=") {
             out.push_str("Name=");
             out.push_str(flavor.display_name());
-        } else if let Some(_) = line.strip_prefix("Exec=") {
+        } else if line.starts_with("Exec=") {
             out.push_str("Exec=");
             out.push_str(exe);
             out.push_str(" desktop");
-        } else if let Some(_) = line.strip_prefix("TryExec=") {
+        } else if line.starts_with("TryExec=") {
             out.push_str("TryExec=");
             out.push_str(exe);
-        } else if let Some(_) = line.strip_prefix("Icon=") {
+        } else if line.starts_with("Icon=") {
             out.push_str("Icon=");
             out.push_str(flavor.id());
         } else {
