@@ -8,6 +8,13 @@ members = [
   "crates/srcthread-mcp",
   "crates/srcthread-uniffi",
 ]
+default-members = [
+  "crates/srcthread",
+  "crates/srcthread-cli",
+  "crates/srcthread-daemon",
+  "crates/srcthread-mcp",
+  "crates/srcthread-uniffi",
+]
 
 [workspace.package]
 authors = ["Gerson Gallo <ggallovalle@gmail.com>"]
@@ -16,9 +23,14 @@ license = "MIT"
 
 [workspace.dependencies]
 pretty_assertions = "1"
+rmcp = { version = "3", features = ["server", "macros", "transport-io", "schemars"] }
+rune = { git = "https://github.com/ggallovalle/rune.git", rev = "db5abf42130beb9f530b1947635f859958ce89ca" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 srcthread = { path = "crates/srcthread" }
+srcthread-daemon = { path = "crates/srcthread-daemon" }
+srcthread-desktop = { path = "apps/desktop" }
+srcthread-mcp = { path = "crates/srcthread-mcp" }
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 uniffi = "0.29"

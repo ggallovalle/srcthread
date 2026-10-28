@@ -3,11 +3,9 @@ name = "srcthread-desktop"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
-description = "Desktop GUI for srcthread (rune comes next)"
+description = "Rune desktop UI for srcthread (entered via `srcthread desktop`)"
 license.workspace = true
 
-[[bin]]
-name = "srcthread-desktop"
-path = "src/main.rs"
-
 [dependencies]
+rune = { workspace = true }
+srcthread = { workspace = true }

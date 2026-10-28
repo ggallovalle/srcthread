@@ -1,0 +1,108 @@
+# srcthread — zsh activation script
+#
+# Source this file from zsh to put a hot CLI on PATH and load completions:
+#
+#     source shellrc/zsh
+#
+# It prepends `shellrc/bin` (a cargo-run shim) to $path, adds `completion/`
+# to $fpath, installs a FreeDesktop `-dev` launcher + ship-badged icon,
+# marks the prompt, and defines `deactivate` to undo the shell bits.
+# Each `srcthread …` rebuilds as needed — no separate cargo build.
+# The `-dev` desktop entry / icon stay installed after deactivate so the
+# app menu can still launch the workspace UI.
+
+# Refuse to run outside zsh. This guard stays POSIX so the message can be
+# printed under other shells before we use any zsh-only syntax.
+if [ -z "${ZSH_VERSION:-}" ]; then
+  echo 'shellrc/zsh: this script is for zsh only, source it from a zsh shell' >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+# Repo root and layout, derived from this file's own location
+# (`shellrc/zsh` → parent of `shellrc/`).
+local srcthread_root="${${(%):-%x}:A:h:h}"
+local srcthread_bin="${srcthread_root}/shellrc/bin"
+local srcthread_completion="${srcthread_root}/completion"
+local srcthread_desktop_id='dev.kbroom.srcthread-dev'
+local srcthread_packaging="${srcthread_root}/packaging/linux"
+local srcthread_data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+local srcthread_app_dir="${srcthread_data_home}/applications"
+local srcthread_icon_dir="${srcthread_data_home}/icons/hicolor/scalable/apps"
+
+# Install / refresh the FreeDesktop -dev launcher + ship-badged icon.
+# Exec points at this checkout's cargo-run shim so PATH is not required.
+function _srcthread_install_desktop {
+  local shim="${srcthread_bin}/srcthread"
+  local desktop_src="${srcthread_packaging}/${srcthread_desktop_id}.desktop"
+  local icon_src="${srcthread_packaging}/${srcthread_desktop_id}.svg"
+  local desktop_dst="${srcthread_app_dir}/${srcthread_desktop_id}.desktop"
+  local icon_dst="${srcthread_icon_dir}/${srcthread_desktop_id}.svg"
+  local tmp
+
+  if [[ ! -f $desktop_src || ! -f $icon_src ]]; then
+    print -u2 "srcthread: missing packaging assets under $srcthread_packaging"
+    return 1
+  fi
+
+  mkdir -p -- "$srcthread_app_dir" "$srcthread_icon_dir"
+  ln -sfn -- "$icon_src" "$icon_dst"
+
+  tmp="$(mktemp)"
+  sed \
+    -e "s|^Name=.*|Name=srcthread (dev)|" \
+    -e "s|^Exec=.*|Exec=${shim} desktop|" \
+    -e "s|^TryExec=.*|TryExec=${shim}|" \
+    -e "s|^Icon=.*|Icon=${srcthread_desktop_id}|" \
+    -- "$desktop_src" >"$tmp"
+  install -m644 -- "$tmp" "$desktop_dst"
+  rm -f -- "$tmp"
+
+  if (( $+commands[update-desktop-database] )); then
+    update-desktop-database -- "$srcthread_app_dir" >/dev/null 2>&1 || true
+  fi
+  if (( $+commands[gtk-update-icon-cache] )); then
+    gtk-update-icon-cache -f -t -- "${srcthread_data_home}/icons/hicolor" >/dev/null 2>&1 || true
+  fi
+}
+
+# Capture the pristine state, then activate — only on first activation.
+if (( ! ${+SRCTHREAD_ACTIVE} )); then
+  export SRCTHREAD_OLD_PATH=$PATH
+  export SRCTHREAD_OLD_PROMPT=$PROMPT
+  typeset -g -a SRCTHREAD_OLD_FPATH
+  SRCTHREAD_OLD_FPATH=($fpath)
+
+  export SRCTHREAD_ACTIVE=$srcthread_bin
+  # $path is an array tied to $PATH, so this updates both.
+  path=($srcthread_bin $path)
+  fpath=($srcthread_completion $fpath)
+
+  # Register zsh completion even if compinit already ran.
+  autoload -Uz _srcthread
+  if (( $+functions[compdef] )); then
+    compdef _srcthread srcthread
+  elif (( ${+_comps} )); then
+    _comps[srcthread]=_srcthread
+  fi
+
+  _srcthread_install_desktop
+fi
+
+# Mark the prompt so it's obvious the environment is active.
+PROMPT="(srcthread) $SRCTHREAD_OLD_PROMPT"
+
+function deactivate {
+  if (( ! ${+SRCTHREAD_ACTIVE} )); then
+    print -u2 'srcthread: not active'
+    return 1
+  fi
+
+  PATH=$SRCTHREAD_OLD_PATH
+  PROMPT=$SRCTHREAD_OLD_PROMPT
+  fpath=($SRCTHREAD_OLD_FPATH)
+  (( ${+_comps} )) && unset '_comps[srcthread]'
+  unfunction _srcthread 2>/dev/null
+  unfunction _srcthread_install_desktop 2>/dev/null
+  unset SRCTHREAD_ACTIVE SRCTHREAD_OLD_PATH SRCTHREAD_OLD_PROMPT SRCTHREAD_OLD_FPATH
+  unfunction deactivate
+}

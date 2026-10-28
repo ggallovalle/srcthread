@@ -1,13 +1,17 @@
-//! CLI surface shaped like mise: one module per top-level command,
-//! nested groups as directories, global flags on the root `Cli`.
+//! CLI surface shaped like mise + herdr: one module per top-level command,
+//! nested groups as directories, global flags on the root `Cli`, and a
+//! **single distributable binary** that also runs the daemon and desktop UI.
 //!
-//! See `research/07-mise-cli-structure.md`.
+//! See `research/07-mise-cli-structure.md` and
+//! `research/08-herdr-single-binary.md`.
 
 mod anchor;
 mod daemon;
+mod desktop;
 mod doctor;
 mod excerpt;
 mod hello;
+mod mcp;
 mod mirror;
 mod r#ref;
 mod search;
@@ -21,9 +25,8 @@ use usage_rs::{Cli, Subcommands};
 /// Local-first research threads over pinned source mirrors.
 ///
 /// Declare stores, pin source mirrors, and keep research threads with
-/// anchors and offline excerpts. Talks to `srcthreadd` when the daemon
-/// socket is up; otherwise falls back to the in-process lib for hello-world
-/// commands.
+/// anchors and offline excerpts. The same binary runs the socket daemon
+/// (`srcthread daemon`) and the rune desktop UI (`srcthread desktop`).
 #[derive(Cli)]
 #[usage(bin = "srcthread", version = env!("CARGO_PKG_VERSION"), verbatim_doc_comment)]
 pub(crate) struct SrcthreadCli {
@@ -54,9 +57,11 @@ pub(crate) struct SrcthreadCli {
 #[derive(Subcommands)]
 #[usage(run)]
 pub(crate) enum Commands {
-    /// Manage the local `srcthreadd` daemon
+    /// Run or control the local socket daemon
     #[usage(visible_alias = "d")]
     Daemon(daemon::Daemon),
+    /// Open the rune desktop UI
+    Desktop(desktop::Desktop),
     /// Manage file-canonical research stores (git vaults)
     Store(store::Store),
     /// Research threads (primary object)
@@ -75,6 +80,8 @@ pub(crate) enum Commands {
     Search(search::Search),
     /// Sync stores via git or nearby peer transfer
     Sync(sync::Sync),
+    /// Run the MCP stdio server (stub)
+    Mcp(mcp::Mcp),
     /// Environment / daemon / store health checks
     #[usage(visible_alias = "dr")]
     Doctor(doctor::Doctor),

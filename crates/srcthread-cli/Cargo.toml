@@ -3,7 +3,7 @@ name = "srcthread-cli"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
-description = "CLI for srcthread research threads"
+description = "Sole PC entrypoint for srcthread (CLI, daemon, desktop, mcp)"
 license.workspace = true
 
 [[bin]]
@@ -14,4 +14,12 @@ path = "src/main.rs"
 serde = { workspace = true }
 serde_json = { workspace = true }
 srcthread = { workspace = true }
+srcthread-daemon = { workspace = true }
+srcthread-desktop = { workspace = true, optional = true }
+srcthread-mcp = { workspace = true }
 usage-rs = { workspace = true }
+
+[features]
+default = ["desktop"]
+# Rune GPU UI; needs system Wayland/Vulkan libs. CI builds with --no-default-features.
+desktop = ["dep:srcthread-desktop"]

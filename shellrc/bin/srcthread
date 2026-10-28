@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Hot shim: always `cargo run`s the workspace CLI so edits are picked up
+# without a separate build step. Put on PATH via `source shellrc/zsh`.
+set -euo pipefail
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+exec cargo run -qp srcthread-cli --manifest-path "$root/Cargo.toml" -- "$@"

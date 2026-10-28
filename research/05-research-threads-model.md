@@ -38,7 +38,7 @@ PC: **daemon + NDJSON socket** owns open stores and warm index
 ## Build order
 
 1. lib (`srcthread`)
-2. daemon + socket (`srcthreadd`)
+2. daemon + socket (`srcthread daemon`)
 3. CLI
 4. nvim
 5. desktop (rune)

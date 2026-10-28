@@ -27,7 +27,7 @@ Useful internals (same repo): `file_picker.rs`, `scan.rs`,
 
 1. **Files stay canonical** — the git store is source of truth; any index is
    derived.
-2. **Optional RAM index in the daemon** — warm `srcthreadd`, not a committed
+2. **Optional RAM index in the daemon** — warm `srcthread daemon`, not a committed
    SQLite catalog for v1.
 3. **Path index first** — threads/anchors useful before content warm-up.
 4. **Event-driven updates** — store mutations (and FS watchers on store dirs)

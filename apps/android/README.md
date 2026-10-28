@@ -1,52 +1,54 @@
 # srcthread (Android)
 
-Kotlin + Gradle UI that loads the Rust engine via
-[UniFFI](https://mozilla.github.io/uniffi-rs/) (`crates/srcthread-uniffi`).
+Kotlin + Jetpack Compose UI. The app depends only on
+[`ktpackages/srcthread`](../../ktpackages/srcthread), which owns UniFFI and
+exposes a Compose-aware [`SrcThread`](../../ktpackages/srcthread/src/main/java/dev/kbroom/srcthread/SrcThread.kt)
+state holder.
+
+Hello-world:
+
+- Reads `greeting` / `threads` as Compose `State`
+- Mutates via `createThread` (Rust → Kotlin push updates state inside the package)
+
+Gradle lives at the **repo root** (next to `Cargo.toml`). UniFFI bindgen + NDK
+run automatically on `:ktpackages:srcthread` `preBuild`.
 
 ## What’s here
 
-- Single-Activity app (`dev.kbroom.srcthread.MainActivity`)
+- Compose `MainActivity` (`dev.kbroom.srcthread`)
 - `applicationId` / `namespace`: `dev.kbroom.srcthread`
-- UniFFI Kotlin package target: `dev.kbroom.srcthread.uniffi`
-- detekt + ktlint-wrapper config under `config/detekt.yaml`
+- detekt + ktlint-wrapper (repo-root `detekt.yaml`; also via `mise run detekt` / hk)
 - `minSdk` 26, `compileSdk` 35
 
-CI does **not** assume the Android SDK. Build locally when you have
-SDK + JDK installed.
-
-## Build (local)
-
-1. Install Android Studio or command-line SDK + JDK 17+.
-2. From this directory, generate the Gradle wrapper if needed:
-
-   ```sh
-   gradle wrapper --gradle-version 8.10.2
-   ```
-
-3. (Optional) Generate UniFFI Kotlin + host lib:
-
-   ```sh
-   ./gradlew bootstrapUniffi
-   ```
-
-4. (Optional) Cross-compile `.so` into `app/src/main/jniLibs`
-   (needs `cargo-ndk` + Android NDK):
-
-   ```sh
-   ./gradlew cargoNdkUniffi
-   ```
-
-5. Build:
-
-   ```sh
-   ./gradlew :app:assembleDebug
-   ```
-
-Without step 4 the Activity shows a static **srcthread hello** label.
-With the native lib present it calls UniFFI `hello()`.
-
-## Lint
+## mise tasks (android CLI — not sdkmanager)
 
 ```sh
-./gradlew detekt
+mise run android-emulator   # android emulator start <avd>
+mise run android-start      # assembleDebug → install → launch
 ```
+
+Override the AVD with `SRCTHREAD_AVD=medium_phone`.
+
+Default AVD `Pixel_9_API_37.2` needs host keyboard support so the
+emulator sidebar Home / Back / Recents buttons inject keys:
+
+```ini
+# ~/.android/avd/Pixel_9_API_37.2.avd/config.ini
+hw.keyboard=yes
+hw.mainKeys=no
+```
+
+Cold-boot once after changing those (`android emulator start` after a full
+quit, or delete the AVD `*.lock` files if a previous run left them stale).
+
+## Manual build
+
+```sh
+# from repo root
+./gradlew :apps:android:assembleDebug
+./gradlew :apps:android:detekt :ktpackages:srcthread:detekt
+```
+
+Needs the `android` CLI on `PATH`, NDK (`android sdk install 'ndk;…'`),
+`cargo-ndk`, and Rust targets `aarch64-linux-android` /
+`x86_64-linux-android`.

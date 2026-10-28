@@ -205,7 +205,7 @@ CapabilityHandle (Clone) // Arc; what APIs take
 ```
 
 - **CLI**: `Decider` reads stdin or a dialog.
-- **`srcthreadd`**: `Decider` is “ask configured policy / always allow
+- **`srcthread daemon`**: `Decider` is “ask configured policy / always allow
   known store roots”; thin clients do not re-prompt for every attach.
 - **Android UniFFI**: `Decider` callbacks into Kotlin UI; same Rust
   handle type as desktop.

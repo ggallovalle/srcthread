@@ -4,6 +4,15 @@ import "package://github.com/jdx/hk/releases/download/v2.8.1/hk@2.8.1#/Builtins.
 min_hk_version = "2.8.1"
 
 local rustFiles = List("**/*.rs", "Cargo.toml", "Cargo.lock")
+local androidKotlin = List(
+  "apps/android/**/*.kt",
+  "apps/android/**/*.kts",
+  "ktpackages/**/*.kt",
+  "ktpackages/**/*.kts",
+  "settings.gradle.kts",
+  "build.gradle.kts",
+  "detekt.yaml"
+)
 
 // Builtins: cargo fmt (with fix) and clippy, tightened to deny warnings.
 local cargoFmt = Builtins.cargo_fmt
@@ -15,7 +24,7 @@ local clippy = new Step {
   glob = rustFiles
   depends = "cargo_fmt"
   check = "mise run clippy-ci"
-  fix = "cargo clippy --workspace --fix --allow-dirty --allow-staged --all-targets -- -D warnings"
+  fix = "cargo clippy -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --fix --allow-dirty --allow-staged --all-targets -- -D warnings"
 }
 
 local test = new Step {
@@ -36,6 +45,14 @@ local rumdlLint = new Step {
 
 local tombi = Builtins.tombi_format
 
+// Android Kotlin lint via Gradle detekt (journalit-aligned config).
+// Skips cleanly when gradlew is missing; CI rust matrix does not require SDK.
+local detekt = new Step {
+  glob = androidKotlin
+  check = "mise run detekt"
+  exclusive = true
+}
+
 // Formatters and static checks only. Safe during a TDD red pass.
 local lintSteps = new Mapping<String, Step> {
   ["cargo_fmt"] = cargoFmt
@@ -43,6 +60,29 @@ local lintSteps = new Mapping<String, Step> {
   ["rumdl_format"] = rumdlFormat
   ["rumdl_lint"] = rumdlLint
   ["tombi_format"] = tombi
+  ["detekt"] = detekt
+}
+
+// Keep `srcthread.usage.kdl` + `completion/` aligned with the usage-rs CLI.
+// Pre-commit only (not lint/CI). Exclusive: cargo run shares the target dir
+// with clippy.
+local renderUsage = new Step {
+  glob = List(
+    "crates/srcthread-cli/**/*.rs",
+    "crates/srcthread-cli/Cargo.toml",
+    "srcthread.usage.kdl",
+    "completion/**"
+  )
+  depends = "cargo_fmt"
+  exclusive = true
+  stage = List(
+    "srcthread.usage.kdl",
+    "completion/_srcthread",
+    "completion/srcthread.bash",
+    "completion/srcthread.fish",
+    "completion/srcthread.ps1"
+  )
+  fix = "mise run render:usage"
 }
 
 hooks {
@@ -62,10 +102,14 @@ hooks {
 
   // Commits: lint/format only so intentional failing tests can be committed.
   // Full `check` (including tests) is enforced by CI on PRs into main.
+  // `render_usage` regenerates the committed usage spec + shell completions.
   ["pre-commit"] {
     fix = true
     stage = true
     stash = "git"
-    steps = lintSteps
+    steps {
+      ...lintSteps
+      ["render_usage"] = renderUsage
+    }
   }
 }

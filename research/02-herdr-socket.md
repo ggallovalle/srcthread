@@ -18,7 +18,9 @@ Cite: <https://herdr.dev/docs/socket-api/>
 
 ## Implications for srcthread
 
-Mirror as **`srcthreadd`**:
+Mirror as a **daemon library** entered via `srcthread daemon` (still named
+`srcthread`, no trailing-`d` binary — see
+`research/08-herdr-single-binary.md`):
 
 - Daemon opens stores, optional RAM index, mirror cache.
 - CLI / nvim / desktop / MCP are thin clients over NDJSON.

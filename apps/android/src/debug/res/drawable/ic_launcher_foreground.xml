@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug: A1g mark + ship badge, both inside the adaptive safe zone.
+  Corner placement gets clipped by circular launcher masks.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="18"
+        android:translateY="18"
+        android:scaleX="0.140625"
+        android:scaleY="0.140625">
+        <path
+            android:fillColor="#636363"
+            android:pathData="M70,88h236a22,22 0,0 1,0 44h-236a22,22 0,0 1,0 -44z" />
+        <path
+            android:fillColor="#636363"
+            android:pathData="M70,150h372a22,22 0,0 1,0 44h-372a22,22 0,0 1,0 -44z" />
+        <path
+            android:fillColor="#636363"
+            android:pathData="M70,212h316a22,22 0,0 1,0 44h-316a22,22 0,0 1,0 -44z" />
+        <path
+            android:fillColor="#636363"
+            android:pathData="M70,274h372a22,22 0,0 1,0 44h-372a22,22 0,0 1,0 -44z" />
+        <path
+            android:fillColor="#636363"
+            android:pathData="M70,336h256a22,22 0,0 1,0 44h-256a22,22 0,0 1,0 -44z" />
+        <path
+            android:fillColor="#636363"
+            android:pathData="M70,398h336a22,22 0,0 1,0 44h-336a22,22 0,0 1,0 -44z" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M80,420C130,420 150,360 200,350C260,336 280,400 330,385C380,370 385,310 400,270C415,230 420,210 425,195"
+            android:strokeWidth="26"
+            android:strokeColor="#F39C12"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:fillColor="#F39C12"
+            android:pathData="M399,195a26,26 0,1 1,52 0a26,26 0,1 1,-52 0z" />
+        <!-- Ship badge: upper-right of safe content (not canvas corner) -->
+        <path
+            android:fillColor="#242424"
+            android:pathData="M330,130a52,52 0,1 1,104 0a52,52 0,1 1,-104 0z"
+            android:strokeWidth="6"
+            android:strokeColor="#F39C12" />
+        <path
+            android:fillColor="#F39C12"
+            android:pathData="M378,98h5v48h-5z" />
+        <path
+            android:fillColor="#F39C12"
+            android:pathData="M384,94L384,132L410,127Z" />
+        <path
+            android:fillColor="#F39C12"
+            android:pathData="M377,102L377,128L358,125Z" />
+        <path
+            android:fillColor="#F39C12"
+            android:pathData="M352,140L408,140L402,152L360,152Z" />
+    </group>
+</vector>

@@ -4,7 +4,7 @@ use serde_json::json;
 use srcthread::Srcthread;
 use usage_rs::{Args, Run};
 
-use super::util::{daemon_call, default_socket_path};
+use super::util::daemon_call;
 
 /// Hello-world: daemon socket if up, else in-process lib
 #[derive(Args)]
@@ -15,9 +15,9 @@ impl Run for Hello {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        let path = default_socket_path();
+        let path = srcthread_daemon::default_socket_path();
         if path.exists() {
-            match daemon_call("hello", json!({})) {
+            match daemon_call("hello", json!({}), Some(path.as_path())) {
                 Ok(result) => {
                     let greeting = result
                         .as_str()

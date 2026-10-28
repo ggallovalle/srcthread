@@ -13,6 +13,5 @@ local.properties
 
 .rumdl_cache/
 
-# UniFFI local outputs (regenerate via ./gradlew bootstrapUniffi / cargoNdkUniffi)
-apps/android/app/src/main/jniLibs/
-apps/android/app/src/main/java/dev/kbroom/srcthread/uniffi/
+# UniFFI native libs (built by :ktpackages:srcthread preBuild / cargo ndk)
+ktpackages/srcthread/src/main/jniLibs/

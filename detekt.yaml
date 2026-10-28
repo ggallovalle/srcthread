@@ -1,0 +1,81 @@
+# Kotlin lint preferences aligned with journalit's spirit, tuned for detekt 1.23.
+# Applied via the detekt Gradle plugin + detekt-formatting (ktlint).
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  LongMethod:
+    threshold: 60
+  LongParameterList:
+    functionThreshold: 6
+    constructorThreshold: 7
+  ComplexCondition:
+    threshold: 4
+  TooManyFunctions:
+    thresholdInFiles: 15
+    thresholdInClasses: 15
+    thresholdInInterfaces: 15
+    thresholdInObjects: 15
+    thresholdInEnums: 15
+    ignoreDeprecated: true
+    ignorePrivate: true
+    ignoreOverridden: true
+  CyclomaticComplexMethod:
+    threshold: 15
+  NestedBlockDepth:
+    threshold: 4
+  StringLiteralDuplication:
+    active: true
+    threshold: 3
+    ignoreAnnotation: true
+
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+
+empty-blocks:
+  EmptyFunctionBlock:
+    ignoreOverridden: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - Error
+      - Exception
+      - RuntimeException
+      - Throwable
+  SwallowedException:
+    active: true
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+
+formatting:
+  active: true
+  android: true
+  autoCorrect: true
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ["Composable"]
+  TopLevelPropertyNaming:
+    constantPattern: "[A-Z][A-Za-z0-9]*"
+
+style:
+  MaxLineLength:
+    maxLineLength: 120
+  MagicNumber:
+    ignoreNumbers: ["-1", "0", "1", "2"]
+  ReturnCount:
+    max: 3
+  ThrowsCount:
+    max: 3
+  UnusedPrivateMember:
+    active: true

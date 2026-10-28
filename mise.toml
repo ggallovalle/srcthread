@@ -5,6 +5,7 @@ rust = { version = "1.99.0", components = "rustfmt,clippy" }
 hk = "2.8.1"
 rumdl = "0.2.79"
 tombi = "1.9.1"
+usage = { version = "7.1.3", workflow = "publish-cli.yml" }
 
 [env]
 CARGO_TARGET_DIR = "{{config_root}}/target"
@@ -23,20 +24,22 @@ run = [
   "rumdl fmt --check --diff .",
   "rumdl check .",
   "tombi format --quiet --check --diff .",
+  "mise run detekt",
 ]
 
-# CI cargo matrix: Rust workspace only.
-# Skips android/desktop GUI (no Android SDK / Wayland GUI in CI).
+# CI cargo matrix: PC libs + CLI without the rune desktop feature
+# (GHA lacks Wayland/Vulkan link deps). Android APK is local-only.
+# Full local GUI: `cargo build -p srcthread-cli` (default features).
 [tasks."clippy-ci"]
-description = "Clippy the Rust workspace (no android/desktop GUI)"
+description = "Clippy CI packages (no rune desktop / Android)"
 run = [
-  "cargo clippy --workspace --all-targets -- -D warnings",
+  "cargo clippy -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --all-targets -- -D warnings",
 ]
 
 [tasks."test-ci"]
-description = "Test the Rust workspace (no android/desktop GUI)"
+description = "Test CI packages (no rune desktop / Android)"
 run = [
-  "cargo test --workspace",
+  "cargo test -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features",
 ]
 
 [tasks."check-ci"]
@@ -53,3 +56,46 @@ run = "mise run check-ci"
 [tasks."pre-commit"]
 description = "Run the hk pre-commit hook (lint/format only)"
 run = "hk run pre-commit"
+
+# Dump usage-rs `__usage_spec__` and regenerate shell completions from it.
+# Kept in sync by the hk `render_usage` pre-commit step.
+[tasks."render:usage"]
+description = "Regenerate srcthread.usage.kdl and completion/{bash,zsh,fish,ps1}"
+dir = "{{config_root}}"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p completion
+# --no-default-features: same CLI surface, no Wayland/Vulkan link deps (CI-safe).
+cargo run -qp srcthread-cli --no-default-features -- __usage_spec__ > srcthread.usage.kdl
+usage generate completion bash srcthread -f srcthread.usage.kdl > completion/srcthread.bash
+usage generate completion zsh srcthread -f srcthread.usage.kdl > completion/_srcthread
+usage generate completion fish srcthread -f srcthread.usage.kdl > completion/srcthread.fish
+usage generate completion powershell srcthread -f srcthread.usage.kdl > completion/srcthread.ps1
+"""
+
+[tasks.detekt]
+description = "Run Android detekt (ktlint wrapper) via Gradle"
+dir = "{{config_root}}"
+run = """
+if [ -z "${ANDROID_HOME:-}${ANDROID_SDK_ROOT:-}" ]; then
+  echo "skip detekt (no Android SDK)"
+  exit 0
+fi
+./gradlew :apps:android:detekt :ktpackages:srcthread:detekt
+"""
+
+[tasks."android-emulator"]
+description = "Start the default Android emulator via android CLI (blocks until ready)"
+run = [
+  "android emulator start ${SRCTHREAD_AVD:-Pixel_9_API_37.2}",
+]
+
+[tasks."android-start"]
+description = "Build, install, and launch the Android app via android CLI"
+dir = "{{config_root}}"
+run = [
+  "./gradlew :apps:android:assembleDebug",
+  "android install --apks apps/android/build/outputs/apk/debug/android-debug.apk",
+  "adb shell am start -n dev.kbroom.srcthread/.MainActivity",
+]
