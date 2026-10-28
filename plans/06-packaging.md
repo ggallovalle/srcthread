@@ -23,6 +23,9 @@ Mise consumers can call these from a tool `postinstall` string.
 | `scripts/checksums.sh` | `dist/SHASUMS256.txt` |
 | `scripts/publish-release.sh <version>` | Tag, build PC + APK, `gh release`, packslip |
 
+Useful flags: `--dry-run`, `--host-only`, `--skip-android`,
+`--skip-desktop`. Set `PACKSLIP_KEY` for local packslip signing.
+
 Archive layout:
 
 ```text

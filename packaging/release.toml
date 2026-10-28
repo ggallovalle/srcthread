@@ -1,0 +1,43 @@
+# Packslip release manifest template. Version and artifact paths are
+# overridden by `scripts/publish-release.sh` via CLI flags; this file
+# documents the intended resources layout.
+#
+# See https://packslip.dev/docs/describing-releases/
+
+project = "github.com/ggallovalle/srcthread"
+
+[[resource]]
+kind = "cli-spec"
+format = "usage"
+bin = "srcthread"
+asset = "dist/srcthread.usage.kdl"
+
+[[resource]]
+kind = "completion"
+shell = "bash"
+asset = "dist/srcthread.bash"
+
+[[resource]]
+kind = "completion"
+shell = "zsh"
+asset = "dist/srcthread.zsh"
+
+[[resource]]
+kind = "completion"
+shell = "fish"
+asset = "dist/srcthread.fish"
+
+[[resource]]
+kind = "completion"
+shell = "powershell"
+asset = "dist/srcthread.powershell"
+
+[[resource]]
+kind = "man"
+os = "linux"
+archive = "srcthread/man/man1/srcthread.1"
+
+[[resource]]
+kind = "man"
+os = "darwin"
+archive = "srcthread/man/man1/srcthread.1"

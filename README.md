@@ -31,6 +31,36 @@ cargo run -p srcthread-cli -- daemon status
 cargo run -p srcthread-cli -- desktop   # needs Wayland/GPU; default feature
 ```
 
+## Install (released builds)
+
+PC via packslip (after a tagged release):
+
+```toml
+[tools]
+"packslip:github.com/ggallovalle/srcthread" = { version = "0.1.0", variant = "desktop" }
+```
+
+Omit `variant` for the cli-only build (`--no-default-features`). Optional
+postinstall:
+
+```toml
+postinstall = "srcthread integration install cursor --user && srcthread desktop install-xdg"
+```
+
+Agent MCP wiring and FreeDesktop helpers:
+
+```sh
+srcthread integration install cursor --user   # or --local
+srcthread integration status
+srcthread desktop install-xdg                 # Linux; --dev for ship-badge
+```
+
+Android: download `srcthread-*-android.apk` from the GitHub release.
+
+Cut a release locally: `scripts/publish-release.sh <version>` (see
+[plans/06-packaging.md](plans/06-packaging.md)). The GitHub Actions release
+workflow is checked in but deactivated.
+
 ## Docs
 
 - [research/](research/) — notes behind decisions
