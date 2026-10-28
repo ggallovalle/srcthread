@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
+#MISE description="Bump lockstep product version (Cargo workspace + Android)"
+#USAGE arg "<target>" help="X.Y.Z, or one of: patch, minor, major"
 """Bump the lockstep product version: workspace Cargo.toml + Android.
 
-Usage:
-  scripts/bump-version.py <X.Y.Z>
-  scripts/bump-version.py patch|minor|major
-
-Does not commit. Run before scripts/publish-release.sh <version>.
+Does not commit. Run before: mise run release:publish <version>
 """
 
 from __future__ import annotations
 
-import argparse
+import os
 import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+
+def project_root() -> Path:
+    """Prefer mise task env; fall back to cwd for direct invocation."""
+    for key in ("MISE_PROJECT_ROOT", "MISE_CONFIG_ROOT"):
+        val = os.environ.get(key)
+        if val:
+            return Path(val)
+    return Path.cwd()
+
+
+ROOT = project_root()
 CARGO_TOML = ROOT / "Cargo.toml"
 ANDROID_GRADLE = ROOT / "apps" / "android" / "build.gradle.kts"
 
@@ -117,18 +125,17 @@ def write_android_version(gradle: Path, version: str, code: int) -> None:
     gradle.write_text(text)
 
 
-def main(argv: list[str]) -> None:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Bump lockstep product version "
-            "(workspace Cargo.toml + Android versionName/versionCode)."
-        ),
-    )
-    parser.add_argument(
-        "target",
-        help="X.Y.Z, or one of: patch, minor, major",
-    )
-    args = parser.parse_args(argv)
+def main() -> None:
+    target = os.environ.get("usage_target")
+    if not target:
+        # Allow direct invocation for debugging.
+        if len(sys.argv) > 1:
+            target = sys.argv[1]
+        else:
+            die(
+                "missing target "
+                "(run via: mise run release:bump <X.Y.Z|patch|minor|major>)"
+            )
 
     if not CARGO_TOML.is_file():
         die(f"missing {CARGO_TOML}")
@@ -136,7 +143,6 @@ def main(argv: list[str]) -> None:
         die(f"missing {ANDROID_GRADLE}")
 
     current = read_workspace_version(CARGO_TOML)
-    target = args.target
     if target in ("patch", "minor", "major"):
         version = bump_semver(current, target)
     else:
@@ -155,4 +161,4 @@ def main(argv: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

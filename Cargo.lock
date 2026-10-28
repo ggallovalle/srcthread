@@ -3105,7 +3105,7 @@ dependencies = [
 
 [[package]]
 name = "srcthread"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "pretty_assertions",
  "pulldown-cmark",
@@ -3120,7 +3120,7 @@ dependencies = [
 
 [[package]]
 name = "srcthread-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "directories",
  "jsonc-parser",
@@ -3140,7 +3140,7 @@ dependencies = [
 
 [[package]]
 name = "srcthread-desktop"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "rune",
  "srcthread",
@@ -3148,7 +3148,7 @@ dependencies = [
 
 [[package]]
 name = "srcthread-mcp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "rmcp",
  "serde",
@@ -3158,7 +3158,7 @@ dependencies = [
 
 [[package]]
 name = "srcthread-uniffi"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "srcthread",
  "thiserror 2.0.21",

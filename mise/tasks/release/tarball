@@ -10,7 +10,7 @@
 #   srcthread-$VER-$os-$arch-desktop.tar.gz  (when variant=desktop)
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
 cd "$ROOT"
 
 RUST_TRIPLE="${1:-$(rustc -vV | awk '/^host:/{print $2}')}"

@@ -10,7 +10,7 @@
 #   HOST_TRIPLE    Override rustc host triple for --host-only builds.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
 cd "$ROOT"
 
 VERSION=""

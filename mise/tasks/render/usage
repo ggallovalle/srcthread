@@ -8,7 +8,7 @@
 #   man/man1/srcthread.1
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
 cd "$ROOT"
 
 
