@@ -145,7 +145,10 @@ fn install_json_server(
     let root = parse_json_root(&text, path)?;
     let root_obj = root.object_value_or_set();
     let Some(servers) = root_obj.object_value_or_create(container) else {
-        return Err(format!("{container} must be an object in {}", path.display()));
+        return Err(format!(
+            "{container} must be an object in {}",
+            path.display()
+        ));
     };
     if servers.get(SERVER_ID).is_some() {
         return Ok(InstallOutcome::AlreadyPresent);
@@ -191,10 +194,7 @@ fn install_codex_toml(path: &Path) -> Result<InstallOutcome, String> {
         doc["mcp_servers"] = Item::Table(Table::new());
     }
     let Some(servers) = doc["mcp_servers"].as_table_mut() else {
-        return Err(format!(
-            "{}: mcp_servers must be a table",
-            path.display()
-        ));
+        return Err(format!("{}: mcp_servers must be a table", path.display()));
     };
     if servers.contains_key(SERVER_ID) {
         return Ok(InstallOutcome::AlreadyPresent);

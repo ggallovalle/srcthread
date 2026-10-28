@@ -3,7 +3,7 @@ use std::fs;
 use pretty_assertions::assert_eq;
 
 use super::install::install_with;
-use super::mcp_config::{self, InstallOutcome, UninstallOutcome, SERVER_ID};
+use super::mcp_config::{self, InstallOutcome, SERVER_ID, UninstallOutcome};
 use super::scope::{Roots, Scope};
 use super::status::status_with;
 use super::targets::Target;
@@ -105,17 +105,20 @@ fn json_install_preserves_comments_indent_and_siblings() {
     mcp_config::install(&path, Target::Cursor.format()).unwrap();
     let text = fs::read_to_string(&path).unwrap();
     assert!(text.contains("// keep me"), "comment lost:\n{text}");
-    assert!(text.contains("\"theme\": \"dark\""), "sibling lost:\n{text}");
     assert!(
-        text.contains("    \"theme\""),
-        "indent rewritten:\n{text}"
+        text.contains("\"theme\": \"dark\""),
+        "sibling lost:\n{text}"
     );
+    assert!(text.contains("    \"theme\""), "indent rewritten:\n{text}");
     assert!(text.contains("\"other\""), "existing server lost:\n{text}");
     assert!(text.contains("\"srcthread\""), "server not added:\n{text}");
 
     mcp_config::uninstall(&path, Target::Cursor.format()).unwrap();
     let text = fs::read_to_string(&path).unwrap();
-    assert!(text.contains("// keep me"), "comment lost on uninstall:\n{text}");
+    assert!(
+        text.contains("// keep me"),
+        "comment lost on uninstall:\n{text}"
+    );
     assert!(text.contains("\"theme\": \"dark\""));
     assert!(text.contains("\"other\""));
     assert!(!text.contains("\"srcthread\""));
@@ -125,8 +128,11 @@ fn json_install_preserves_comments_indent_and_siblings() {
 fn codex_toml_round_trip_preserves_other_keys() {
     let (_tmp, roots) = setup();
     let path = Target::Codex.config_path(Scope::User, &roots);
-    fs::write(&path, "model = \"gpt-5\"\n\n[projects.\"/tmp\"]\ntrust_level = \"trusted\"\n")
-        .unwrap();
+    fs::write(
+        &path,
+        "model = \"gpt-5\"\n\n[projects.\"/tmp\"]\ntrust_level = \"trusted\"\n",
+    )
+    .unwrap();
     mcp_config::install(&path, Target::Codex.format()).unwrap();
     let text = fs::read_to_string(&path).unwrap();
     assert!(text.contains("model = \"gpt-5\""));
