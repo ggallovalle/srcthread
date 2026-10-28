@@ -29,6 +29,18 @@ mise run android-start      # assembleDebug → install → launch
 
 Override the AVD with `SRCTHREAD_AVD=medium_phone`.
 
+Default AVD `Pixel_9_API_37.2` needs host keyboard support so the
+emulator sidebar Home / Back / Recents buttons inject keys:
+
+```ini
+# ~/.android/avd/Pixel_9_API_37.2.avd/config.ini
+hw.keyboard=yes
+hw.mainKeys=no
+```
+
+Cold-boot once after changing those (`android emulator start` after a full
+quit, or delete the AVD `*.lock` files if a previous run left them stale).
+
 ## Manual build
 
 ```sh
