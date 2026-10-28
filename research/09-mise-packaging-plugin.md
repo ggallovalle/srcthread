@@ -42,7 +42,10 @@ For us:
 
 ```toml
 [tools]
-"packslip:github.com/OWNER/srcthread" = { version = "0.1.0", variant = "desktop" }
+"packslip:github.com/OWNER/srcthread" = {
+  version = "0.1.0",
+  variant = "desktop",
+}
 # omit variant → default (cli + mcp, no rune)
 ```
 
@@ -129,7 +132,10 @@ Packslip does not edit agent configs. Options:
    "packslip:github.com/OWNER/srcthread" = {
      version = "0.1.0",
      variant = "desktop",
-     postinstall = "srcthread integration install cursor && srcthread integration install claude",
+     postinstall = """
+       srcthread integration install cursor && \
+       srcthread integration install claude
+     """,
    }
    ```
 

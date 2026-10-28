@@ -8,8 +8,8 @@
 use std::process::ExitCode;
 
 use rmcp::{
-    handler::server::wrapper::Parameters, schemars, tool, tool_handler, tool_router,
-    ServerHandler, ServiceExt, transport::stdio,
+    ServerHandler, ServiceExt, handler::server::wrapper::Parameters, schemars, tool, tool_handler,
+    tool_router, transport::stdio,
 };
 use serde::Deserialize;
 use srcthread::Srcthread;

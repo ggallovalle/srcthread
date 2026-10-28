@@ -17,7 +17,8 @@ run automatically on `:ktpackages:srcthread` `preBuild`.
 
 - Compose `MainActivity` (`dev.kbroom.srcthread`)
 - `applicationId` / `namespace`: `dev.kbroom.srcthread`
-- detekt + ktlint-wrapper (repo-root `detekt.yaml`; also via `mise run detekt` / hk)
+- detekt + ktlint-wrapper (repo-root `detekt.yaml`; also via
+  `mise run detekt` / hk)
 - `minSdk` 26, `compileSdk` 35
 
 ## mise tasks (android CLI — not sdkmanager)
