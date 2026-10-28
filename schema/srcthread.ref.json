@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RefMeta",
+  "description": "External reference metadata.",
+  "type": "object",
+  "properties": {
+    "body_path": {
+      "description": "Optional path relative to the thread dir for a pasted body.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kind": {
+      "$ref": "#/$defs/RefKind"
+    },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "$defs": {
+    "RefKind": {
+      "description": "External ref kind.",
+      "type": "string",
+      "enum": [
+        "pr",
+        "issue",
+        "doc",
+        "chat",
+        "other"
+      ]
+    }
+  }
+}

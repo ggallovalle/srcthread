@@ -1,5 +1,10 @@
 # herdr: daemon + socket API
 
+> **Outcome:** studied and **not adopted** for srcthread v1. File-canonical
+> stores do not need herdr’s live-session server. See
+> [09-no-daemon.md](09-no-daemon.md). Kept as research so the rejection is
+> documented.
+
 Notes on [Herdr's socket API](https://herdr.dev/docs/socket-api/) as a pattern
 for PC clients that should not re-warm store/index state on every invocation.
 
@@ -16,13 +21,10 @@ for PC clients that should not re-warm store/index state on every invocation.
 
 Cite: <https://herdr.dev/docs/socket-api/>
 
-## Implications for srcthread
+## Implications for srcthread (historical sketch)
 
-Mirror as a **daemon library** entered via `srcthread daemon` (still named
-`srcthread`, no trailing-`d` binary — see
-`research/08-herdr-single-binary.md`):
-
-- Daemon opens stores, optional RAM index, mirror cache.
-- CLI / nvim / desktop / MCP are thin clients over NDJSON.
-- Autostart on first client call if the socket is missing.
-- Lib stays embeddable (Android in-process via UniFFI without the daemon).
+We briefly planned a **daemon library** entered via `srcthread daemon` and
+thin NDJSON clients. That mirrored herdr’s shape but not herdr’s *need*
+(live PTYs across disconnect). Superseded by in-process lib everywhere:
+[09-no-daemon.md](09-no-daemon.md). Single-binary packaging without a daemon
+subcommand remains: [08-herdr-single-binary.md](08-herdr-single-binary.md).

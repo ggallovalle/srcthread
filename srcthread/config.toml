@@ -1,0 +1,9 @@
+[store]
+name = "srcthread dogfood"
+description = "In-repo research store; exemplar thread is Deno.env.get."
+authors = ["kbroom"]
+license = "MIT"
+tags = ["dogfood", "deno", "exemplar"]
+
+[mirrors]
+deno = { git = "https://github.com/denoland/deno" }

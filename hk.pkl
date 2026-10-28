@@ -24,7 +24,7 @@ local clippy = new Step {
   glob = rustFiles
   depends = "cargo_fmt"
   check = "mise run clippy-ci"
-  fix = "cargo clippy -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --fix --allow-dirty --allow-staged --all-targets -- -D warnings"
+  fix = "cargo clippy -p srcthread -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --fix --allow-dirty --allow-staged --all-targets -- -D warnings"
 }
 
 local test = new Step {

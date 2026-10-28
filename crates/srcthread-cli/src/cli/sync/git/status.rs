@@ -2,7 +2,7 @@ use std::process::ExitCode;
 
 use usage_rs::{Args, Run};
 
-use crate::cli::util::stub;
+use super::run_git;
 
 #[derive(Args)]
 pub(crate) struct Status {}
@@ -11,6 +11,6 @@ impl Run for Status {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        stub("sync git status")
+        run_git(&["status", "--short", "--branch"])
     }
 }

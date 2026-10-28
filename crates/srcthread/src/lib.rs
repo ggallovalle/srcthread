@@ -1,39 +1,44 @@
 //! srcthread engine library.
 //!
-//! This crate is the only source-of-truth engine for the project.
-//! The daemon, CLI, MCP server, and desktop UI all call into this library;
-//! they do not own persistence or domain logic themselves.
-//!
-//! Hello-world builds expose an in-memory [`Srcthread`] / [`Store`] facade
-//! with at least one **query** ([`Srcthread::list_threads`]) and one
-//! **mutation** ([`Srcthread::create_thread`]).
+//! Sole source-of-truth for store I/O and domain types. CLI, MCP, desktop,
+//! nvim, and Android call this in-process.
 
+mod error;
+pub mod ids;
+pub mod lint;
+pub mod markdown;
+pub mod schema;
+mod store;
+pub mod types;
+
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use thiserror::Error;
+pub use error::{Error, Result};
+pub use ids::{new_entity_id, short_ulid_suffix, slugify};
+pub use lint::{LintDiagnostic, lint_store};
+pub use markdown::{Fence, extract_fences, split_toml_frontmatter};
+pub use store::{
+    DiskStore, LoadedAnchor, LoadedExcerpt, LoadedRef, LoadedThread, init_store, load_thread_dir,
+    resolve_store_root,
+};
+pub use types::*;
 
-/// Errors from the in-memory hello-world store.
-#[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum Error {
-    /// Thread id already exists.
-    #[error("thread already exists: {0}")]
-    ThreadExists(String),
-    /// Empty thread id.
-    #[error("thread id must not be empty")]
-    EmptyThreadId,
-}
-
-/// In-memory store handle (hello-world stub).
+/// In-memory hello-world store (tests / surfaces not yet on disk).
 #[derive(Debug, Default)]
-pub struct Store {
+struct MemoryInner {
     threads: Vec<String>,
 }
 
-/// Facade over a [`Store`]. Created with [`Srcthread::open_memory`] for tests
-/// and local use. Cheap to clone: shares the store via [`Arc`].
-#[derive(Debug, Clone)]
+enum Backend {
+    Memory(Arc<Mutex<MemoryInner>>),
+    Disk(DiskStore),
+}
+
+/// Facade over an in-memory or on-disk store.
+#[derive(Clone)]
 pub struct Srcthread {
-    store: Arc<Mutex<Store>>,
+    backend: Arc<Backend>,
 }
 
 impl Default for Srcthread {
@@ -42,59 +47,171 @@ impl Default for Srcthread {
     }
 }
 
-impl Srcthread {
-    /// Open an in-memory engine (no disk). Suitable for hello-world and unit tests.
-    pub fn open_memory() -> Self {
-        Self {
-            store: Arc::new(Mutex::new(Store {
-                threads: vec!["demo-thread".to_string()],
-            })),
-        }
-    }
-
-    /// Returns the project greeting token (query).
-    pub fn hello(&self) -> &'static str {
-        "srcthread"
-    }
-
-    /// List known thread ids (query).
-    pub fn list_threads(&self) -> Vec<String> {
-        self.store.lock().expect("store lock").threads.clone()
-    }
-
-    /// Create a research thread id (mutation).
-    pub fn create_thread(&self, id: impl Into<String>) -> Result<(), Error> {
-        let id = id.into();
-        if id.trim().is_empty() {
-            return Err(Error::EmptyThreadId);
-        }
-        let mut store = self.store.lock().expect("store lock");
-        if store.threads.iter().any(|t| t == &id) {
-            return Err(Error::ThreadExists(id));
-        }
-        store.threads.push(id);
-        Ok(())
-    }
-
-    /// Borrow a snapshot of the underlying store (clone of thread ids).
-    pub fn store(&self) -> StoreSnapshot {
-        StoreSnapshot {
-            threads: self.list_threads(),
+impl std::fmt::Debug for Srcthread {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &*self.backend {
+            Backend::Memory(_) => f.write_str("Srcthread(Memory)"),
+            Backend::Disk(d) => f.debug_tuple("Srcthread").field(&d.root()).finish(),
         }
     }
 }
 
-/// Read-only snapshot of store contents.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StoreSnapshot {
-    /// Thread ids currently in the store.
-    pub threads: Vec<String>,
+impl Srcthread {
+    /// Open an in-memory engine (no disk).
+    pub fn open_memory() -> Self {
+        Self {
+            backend: Arc::new(Backend::Memory(Arc::new(Mutex::new(MemoryInner {
+                threads: vec!["demo-thread".to_string()],
+            })))),
+        }
+    }
+
+    /// Open a file-canonical store at `path` (store root or project containing
+    /// `srcthread/`).
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let disk = store::open_disk(path.as_ref())?;
+        Ok(Self {
+            backend: Arc::new(Backend::Disk(disk)),
+        })
+    }
+
+    /// Returns the project greeting token.
+    pub fn hello(&self) -> &'static str {
+        "srcthread"
+    }
+
+    /// On-disk store handle when opened from disk.
+    pub fn disk(&self) -> Option<&DiskStore> {
+        match &*self.backend {
+            Backend::Disk(d) => Some(d),
+            Backend::Memory(_) => None,
+        }
+    }
+
+    /// List thread ids (memory) or full [`ThreadMeta`] via [`Self::list_thread_meta`].
+    pub fn list_threads(&self) -> Vec<String> {
+        match &*self.backend {
+            Backend::Memory(m) => m.lock().expect("store lock").threads.clone(),
+            Backend::Disk(d) => d
+                .list_threads()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|t| t.id)
+                .collect(),
+        }
+    }
+
+    /// List thread metadata from disk (empty on memory backend).
+    pub fn list_thread_meta(&self) -> Result<Vec<ThreadMeta>> {
+        match &*self.backend {
+            Backend::Memory(m) => Ok(m
+                .lock()
+                .expect("store lock")
+                .threads
+                .iter()
+                .map(|id| ThreadMeta {
+                    id: id.clone(),
+                    title: id.clone(),
+                    tags: Vec::new(),
+                    created: String::new(),
+                    updated: String::new(),
+                })
+                .collect()),
+            Backend::Disk(d) => d.list_threads(),
+        }
+    }
+
+    /// Get one thread by id.
+    pub fn get_thread(&self, id: &str) -> Result<ThreadMeta> {
+        match &*self.backend {
+            Backend::Memory(m) => {
+                let threads = m.lock().expect("store lock");
+                if threads.threads.iter().any(|t| t == id) {
+                    Ok(ThreadMeta {
+                        id: id.to_string(),
+                        title: id.to_string(),
+                        tags: Vec::new(),
+                        created: String::new(),
+                        updated: String::new(),
+                    })
+                } else {
+                    Err(Error::ThreadNotFound(id.to_string()))
+                }
+            }
+            Backend::Disk(d) => d.get_thread(id),
+        }
+    }
+
+    /// Load full thread (anchors/excerpts/refs/notes). Disk only.
+    pub fn load_thread(&self, id: &str) -> Result<LoadedThread> {
+        match &*self.backend {
+            Backend::Disk(d) => d.load_thread(id),
+            Backend::Memory(_) => Err(Error::toml(
+                "load_thread requires an on-disk store".to_string(),
+            )),
+        }
+    }
+
+    /// Create a research thread. Memory: push id. Disk: write `threads/<id>/`.
+    pub fn create_thread(&self, id: impl Into<String>) -> Result<()> {
+        let id = id.into();
+        if id.trim().is_empty() {
+            return Err(Error::EmptyThreadId);
+        }
+        match &*self.backend {
+            Backend::Memory(m) => {
+                let mut store = m.lock().expect("store lock");
+                if store.threads.iter().any(|t| t == &id) {
+                    return Err(Error::ThreadExists(id));
+                }
+                store.threads.push(id);
+                Ok(())
+            }
+            Backend::Disk(d) => {
+                d.create_thread_with_meta(ThreadMeta {
+                    id: id.clone(),
+                    title: id,
+                    tags: Vec::new(),
+                    created: String::new(),
+                    updated: String::new(),
+                })?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Disk: slugify `title` + ULID suffix and write thread tree. Memory: same id push.
+    pub fn create_thread_from_title(&self, title: &str) -> Result<ThreadMeta> {
+        match &*self.backend {
+            Backend::Disk(d) => d.create_thread_from_title(title),
+            Backend::Memory(m) => {
+                let id = new_entity_id(title);
+                let mut store = m.lock().expect("store lock");
+                if store.threads.iter().any(|t| t == &id) {
+                    return Err(Error::ThreadExists(id));
+                }
+                store.threads.push(id.clone());
+                Ok(ThreadMeta {
+                    id: id.clone(),
+                    title: title.to_string(),
+                    tags: Vec::new(),
+                    created: String::new(),
+                    updated: String::new(),
+                })
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use std::path::PathBuf;
+
+    fn repo_seed() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+    }
 
     #[test]
     fn open_memory_hello_list_and_create() {
@@ -106,9 +223,49 @@ mod tests {
             eng.list_threads(),
             vec!["demo-thread".to_string(), "from-test".to_string()]
         );
-        assert_eq!(
+        assert!(matches!(
             eng.create_thread("from-test"),
-            Err(Error::ThreadExists("from-test".into()))
+            Err(Error::ThreadExists(_))
+        ));
+    }
+
+    #[test]
+    fn open_seed_lists_deno_thread() {
+        let eng = Srcthread::open(repo_seed()).expect("open seed store");
+        let ids = eng.list_threads();
+        assert!(
+            ids.iter().any(|id| id == "deno-env-get-01HK3K6N8R"),
+            "ids={ids:?}"
         );
+        let meta = eng.get_thread("deno-env-get-01HK3K6N8R").unwrap();
+        assert_eq!(meta.title, "How is Deno.env.get implemented?");
+        let cfg = eng.disk().unwrap().config();
+        assert_eq!(cfg.store.name, "srcthread dogfood");
+        assert!(cfg.mirrors.contains_key("deno"));
+    }
+
+    #[test]
+    fn seed_thread_loads_anchors_excerpts_refs() {
+        let eng = Srcthread::open(repo_seed()).unwrap();
+        let t = eng.load_thread("deno-env-get-01HK3K6N8R").unwrap();
+        assert!(t.notes.contains("Deno.env.get"));
+        assert!(t.anchors.len() >= 2);
+        assert!(!t.excerpts.is_empty());
+        assert!(!t.refs.is_empty());
+        assert!(t.excerpts.iter().any(|e| !e.fences.is_empty()));
+        assert!(
+            t.anchors
+                .iter()
+                .any(|a| !a.embedded_fences.is_empty() || a.path.extension().is_some())
+        );
+        let git = eng.disk().unwrap().mirror_git("deno").unwrap();
+        assert!(git.contains("denoland/deno"));
+        let rust_excerpt = t
+            .excerpts
+            .iter()
+            .find(|e| e.meta.id == "op-get-env-body-01HK3K6N93")
+            .expect("rust excerpt");
+        assert_eq!(rust_excerpt.meta.anchor_id, "op-get-env-01HK3K6N90");
+        assert!(rust_excerpt.fences[0].body.contains("op_get_env"));
     }
 }

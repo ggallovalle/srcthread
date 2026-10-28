@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StoreConfig",
+  "description": "Root of `config.toml`.",
+  "type": "object",
+  "properties": {
+    "mirrors": {
+      "description": "Mirror id → clone URL. Pins (sha/path) live on anchors.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/MirrorSpec"
+      },
+      "default": {}
+    },
+    "store": {
+      "description": "Human / registry metadata.",
+      "$ref": "#/$defs/StoreMeta"
+    }
+  },
+  "required": [
+    "store"
+  ],
+  "$defs": {
+    "MirrorSpec": {
+      "description": "One `[mirrors.<id>]` entry — repo identity only.",
+      "type": "object",
+      "properties": {
+        "git": {
+          "description": "Git clone URL.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "git"
+      ]
+    },
+    "StoreMeta": {
+      "description": "`[store]` table.",
+      "type": "object",
+      "properties": {
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "edition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "license": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "description": "Required display name.",
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  }
+}

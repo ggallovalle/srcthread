@@ -1,7 +1,8 @@
 # srcthread (Neovim)
 
-Thin Neovim client for the `srcthread` CLI / daemon (same idea as fff.nvim
-talking to its rust core: Lua stays thin, the engine owns state).
+Thin Neovim client for the `srcthread` CLI (same idea as fff.nvim talking to
+its rust core: Lua stays thin, the engine owns state). The CLI embeds the
+lib in-process — no PC daemon.
 
 ## lazy.nvim
 
@@ -17,7 +18,7 @@ talking to its rust core: Lua stays thin, the engine owns state).
 ```
 
 Put `srcthread` on `PATH` (or set `SRCTHREAD_BIN`). The plugin shells out to
-the CLI, which prefers the daemon socket when up.
+the CLI.
 
 ## Hello-world API
 

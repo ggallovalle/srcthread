@@ -5,7 +5,7 @@ Arch. Repo may stay private; treat history as if it could become public.
 
 ## Application stack
 
-- Rust + `tokio` — async engine and daemon I/O.
+- Rust + `tokio` — async engine I/O where needed.
 - `usage-rs` — typed CLIs from Rust structs/enums for every CLI surface.
   Prefer over clap or plain `env::args_os()`.
 - `rune` — GPU desktop UI (wgpu/winit), plain Rust views; opened via
@@ -13,25 +13,26 @@ Arch. Repo may stay private; treat history as if it could become public.
 - UniFFI — bound inside `ktpackages/srcthread`; Android UI uses Compose
   `SrcThread` only (no direct UniFFI).
 
-The `srcthread` crate is the only source-of-truth engine. Daemon, CLI, nvim,
-desktop, Android, and MCP call it (in-process or over the socket).
+The `srcthread` crate is the only source-of-truth engine. CLI, nvim, desktop,
+Android, and MCP call it **in-process**. No PC daemon
+(`research/09-no-daemon.md`).
 
 ## Single PC binary (herdr-shaped)
 
-`srcthread` is the **only** user-facing PC executable. Daemon, desktop, and
-MCP are libraries entered as subcommands (`srcthread daemon`,
-`srcthread desktop`, `srcthread mcp`). See
+`srcthread` is the **only** user-facing PC executable. Desktop and MCP are
+libraries entered as subcommands (`srcthread desktop`, `srcthread mcp`). See
 `research/08-herdr-single-binary.md`. Do not add a second product `[[bin]]`
-for the daemon or GUI.
+for the GUI or a daemon.
 
 ## Layout
 
+- `CONTEXT.md` — product glossary
+- `PLAN.md` — settled strap + build order
 - `research/` — notes behind decisions
 - `plans/` — phased roadmap and surface sketches
 - `crates/srcthread` — lib facade + store
-- `crates/srcthread-daemon` — socket daemon **library**
 - `crates/srcthread-cli` — sole PC binary (`src/cli/` mise-shaped)
-- `crates/srcthread-mcp` — MCP **library** (stdio stub)
+- `crates/srcthread-mcp` — MCP **library** (stdio)
 - `apps/desktop` — rune desktop **library**
 - `ktpackages/srcthread` — Kotlin Android library; UniFFI + `SrcThread` facade
 - `apps/android` — Kotlin + Jetpack Compose UI (depends on kt package)

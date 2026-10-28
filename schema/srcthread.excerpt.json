@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExcerptMeta",
+  "description": "TOML frontmatter for a standalone excerpt file.",
+  "type": "object",
+  "properties": {
+    "anchor_id": {
+      "description": "Anchor id this excerpt freezes.",
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "anchor_id"
+  ]
+}

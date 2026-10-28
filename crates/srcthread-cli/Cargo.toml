@@ -3,7 +3,7 @@ name = "srcthread-cli"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-description = "Sole PC entrypoint for srcthread (CLI, daemon, desktop, mcp)"
+description = "Sole PC entrypoint for srcthread (CLI, desktop, mcp)"
 license.workspace = true
 
 [[bin]]
@@ -16,10 +16,12 @@ jsonc-parser = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 srcthread = { workspace = true }
-srcthread-daemon = { workspace = true }
 srcthread-desktop = { workspace = true, optional = true }
 srcthread-mcp = { workspace = true }
+toml = { workspace = true }
 toml_edit = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 usage-rs = { workspace = true }
 
 [dev-dependencies]

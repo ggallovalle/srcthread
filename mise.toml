@@ -33,13 +33,13 @@ run = [
 [tasks."clippy-ci"]
 description = "Clippy CI packages (no rune desktop / Android)"
 run = [
-  "cargo clippy -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --all-targets -- -D warnings",
+  "cargo clippy -p srcthread -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --all-targets -- -D warnings",
 ]
 
 [tasks."test-ci"]
 description = "Test CI packages (no rune desktop / Android)"
 run = [
-  "cargo test -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features",
+  "cargo test -p srcthread -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features",
 ]
 
 [tasks."check-ci"]
@@ -57,12 +57,18 @@ run = "mise run check-ci"
 description = "Run the hk pre-commit hook (lint/format only)"
 run = "hk run pre-commit"
 
-# Dump usage-rs `__usage_spec__` and regenerate shell completions from it.
-# Kept in sync by the hk `render_usage` pre-commit step.
-[tasks."render:usage"]
-description = "Regenerate usage KDL, completions, and man page"
+# `render:usage` is a file task: mise/tasks/render/usage
+# (hk `render_usage` pre-commit step calls `mise run render:usage`).
+
+[tasks."render:schema"]
+description = "Regenerate schema/*.json from schemars types"
 dir = "{{config_root}}"
-run = "scripts/release-assets.sh"
+run = "cargo run -qp srcthread --example render_schemas"
+
+[tasks."lint-seed"]
+description = "Lint the in-repo srcthread/ dogfood store"
+dir = "{{config_root}}"
+run = "cargo run -qp srcthread-cli --no-default-features -- lint"
 
 [tasks.detekt]
 description = "Run Android detekt (ktlint wrapper) via Gradle"

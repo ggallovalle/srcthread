@@ -1,6 +1,6 @@
---- Talk to the srcthread engine through the `srcthread` CLI (which prefers the
---- daemon socket when up). Hello-world: one query + one mutation, like how
---- fff.nvim talks to its rust core — thin Lua over the real engine.
+--- Talk to the srcthread engine through the `srcthread` CLI (in-process lib).
+--- Hello-world: one query + one mutation, like how fff.nvim talks to its rust
+--- core — thin Lua over the real engine.
 
 local M = {}
 

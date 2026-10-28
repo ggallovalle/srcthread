@@ -16,8 +16,8 @@ long_about #"""
 Local-first research threads over pinned source mirrors.
 
 Declare stores, pin source mirrors, and keep research threads with
-anchors and offline excerpts. The same binary runs the socket daemon
-(`srcthread daemon`) and the rune desktop UI (`srcthread desktop`).
+anchors and offline excerpts. The same binary runs the rune desktop UI
+(`srcthread desktop`) and the MCP server (`srcthread mcp`).
 """#
 subcommand_required #true
 flag "-C --cd" help="Change to DIR before running (and prefer its store, later)" global=#true {
@@ -31,26 +31,6 @@ flag "-v --verbose" help="Extra output (-vv for more)" var=#true global=#true co
 flag "-y --yes" help="Answer yes to confirmation prompts" global=#true
 flag "-h --help" help="Print help" action=help builtin=#true
 flag "-V --version" help="Print version" action=version builtin=#true
-cmd daemon help="Run or control the local socket daemon" {
-    alias d
-    long_help #"""
-Run or control the local socket daemon
-
-With no subcommand, runs the daemon in the foreground (herdr-style:
-`srcthread daemon` *is* the server process). Use `stop` / `status` against
-a running instance.
-"""#
-    flag --socket help="Unix socket path (default: `$XDG_RUNTIME_DIR/srcthread.sock`)" global=#true {
-        arg <PATH>
-    }
-    flag "-h --help" help="Print help" action=help builtin=#true
-    cmd stop help="Stop a running daemon via the socket" {
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
-    cmd status help="Show daemon reachability and socket path" {
-        flag "-h --help" help="Print help" action=help builtin=#true
-    }
-}
 cmd desktop help="Open the rune desktop UI" {
     long_help #"""
 Open the rune desktop UI
@@ -80,8 +60,12 @@ With no subcommand, prints the active store path (stub).
 """#
     flag "-h --help" help="Print help" action=help builtin=#true
     cmd init help="Create a new file-canonical store directory" {
+        flag --at-path help="Create the store at PATH itself instead of PATH/srcthread/"
+        flag --name help="Display name in config.toml (default: directory name)" {
+            arg <NAME>
+        }
         flag "-h --help" help="Print help" action=help builtin=#true
-        arg <PATH> help="Directory for the new store (git vault)"
+        arg <PATH> help="Directory for the new store (git vault or project to nest under)"
     }
     cmd list help="List known stores" {
         alias ls
@@ -131,7 +115,7 @@ cmd anchor subcommand_required=#true help="Anchors into mirrored source at a pin
         flag --thread help="Thread id" required=#true {
             arg <THREAD>
         }
-        flag --repo help="Upstream repo URL or mirror id" required=#true {
+        flag --repo help="Mirror id (must exist in [mirrors] unless already a known id string)" required=#true {
             arg <REPO>
         }
         flag --sha help="Pinned commit SHA" required=#true {
@@ -145,6 +129,9 @@ cmd anchor subcommand_required=#true help="Anchors into mirrored source at a pin
         }
         flag --symbol help="Optional symbol name (e.g. op_get_env)" {
             arg <SYMBOL>
+        }
+        flag --id help="Optional explicit anchor id" {
+            arg <ID>
         }
         flag "-h --help" help="Print help" action=help builtin=#true
     }
@@ -170,8 +157,20 @@ cmd excerpt subcommand_required=#true help="Offline frozen excerpts around ancho
         flag --anchor help="Anchor id to excerpt" required=#true {
             arg <ANCHOR>
         }
-        flag --context help="Context lines before/after" default="10" {
+        flag --context help="Context lines before/after when reading from a local mirror" default="10" {
             arg <CONTEXT>
+        }
+        flag --thread help="Thread id (default: thread that owns the anchor)" {
+            arg <THREAD>
+        }
+        flag --body-file help="Offline body file when the mirror clone is absent" {
+            arg <BODY_FILE>
+        }
+        flag --lang help="Fence language (default: guessed from anchor path, else text)" {
+            arg <LANG>
+        }
+        flag --id help="Explicit excerpt id" {
+            arg <ID>
         }
         flag "-h --help" help="Print help" action=help builtin=#true
     }
@@ -191,6 +190,15 @@ cmd ref subcommand_required=#true help="External refs (PR, issue, doc, chat)" {
         }
         flag --file help="Optional local transcript / note path to ingest" {
             arg <FILE>
+        }
+        flag --kind help="Ref kind (default: inferred from URL, else other)" {
+            arg <KIND>
+        }
+        flag --title help="Display title" {
+            arg <TITLE>
+        }
+        flag --id help="Explicit ref id" {
+            arg <ID>
         }
         flag "-h --help" help="Print help" action=help builtin=#true
     }
@@ -246,7 +254,7 @@ cmd sync subcommand_required=#true help="Sync stores via git or nearby peer tran
         long_help #"""
 Git-backed store sync
 
-With no subcommand, shows git status (stub).
+With no subcommand, shows git status.
 """#
         flag "-h --help" help="Print help" action=help builtin=#true
         cmd push help="`git push` the active store" {
@@ -315,11 +323,21 @@ With no scope flag, prints both user and local for every target.
         group scope "--user" "--local"
     }
 }
-cmd doctor help="Environment / daemon / store health checks" {
+cmd doctor help="Environment / store health checks" {
     alias dr
     flag "-h --help" help="Print help" action=help builtin=#true
 }
-cmd hello help="Hello-world: daemon socket if up, else in-process lib" {
+cmd lint help="Lint the active store (structural checks)" {
+    long_help #"""
+Lint the active store (structural checks)
+
+Everyday commands stay lenient; use this for a strict pass. `--fix` is
+reserved for safe autofixes (not implemented yet).
+"""#
+    flag --fix help="Apply safe autofixes (stub)"
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
+cmd hello help="Hello-world: in-process lib greeting" {
     flag "-h --help" help="Print help" action=help builtin=#true
 }
 '
