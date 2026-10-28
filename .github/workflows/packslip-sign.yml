@@ -1,0 +1,75 @@
+# Keyless packslip for an existing GitHub release (OIDC / no pubkey).
+#
+# After scripts/publish-release.sh creates the tag + assets:
+#   gh workflow run packslip-sign.yml -f tag=v0.2.0
+#   # or: Actions → packslip-sign → Run workflow
+#
+# Does not build binaries. Downloads release assets, signs with this job's
+# OIDC identity, uploads packslip.sigstore.json (clobbers a key-signed one).
+name: packslip-sign
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag (e.g. v0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download release assets into dist/
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag }}"
+          mkdir -p dist
+          gh release download "$tag" -D dist \
+            -p 'srcthread-*.tar.gz' \
+            -p 'srcthread.usage.kdl' \
+            -p 'srcthread.bash' \
+            -p 'srcthread.zsh' \
+            -p 'srcthread.fish' \
+            -p 'srcthread.powershell'
+          ls -lh dist/
+
+      - name: Resolve desktop variant mapping
+        id: variants
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          variants=()
+          for f in dist/srcthread-*-desktop.tar.gz; do
+            variants+=("$(basename "$f")=desktop")
+          done
+          if [[ ${#variants[@]} -eq 0 ]]; then
+            echo "variants=" >>"$GITHUB_OUTPUT"
+          else
+            echo "variants=${variants[*]}" >>"$GITHUB_OUTPUT"
+          fi
+
+      - uses: jdx/packslip@v1
+        with:
+          tag: ${{ inputs.tag }}
+          # Private user repos cannot use GitHub attestations; OIDC still signs.
+          attest: false
+          artifacts: dist/srcthread-*.tar.gz
+          variants: ${{ steps.variants.outputs.variants }}
+          bin: srcthread
+          resources: |
+            cli-spec/usage=asset:dist/srcthread.usage.kdl
+            completion/bash=asset:dist/srcthread.bash
+            completion/zsh=asset:dist/srcthread.zsh
+            completion/fish=asset:dist/srcthread.fish
+            completion/powershell=asset:dist/srcthread.powershell
+            man@linux=archive:srcthread/man/man1/srcthread.1
+            man@darwin=archive:srcthread/man/man1/srcthread.1

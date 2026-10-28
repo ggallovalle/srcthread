@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
 # Cut a GitHub release manually: PC tarballs (+ optional desktop variant),
-# usage/completions assets, Android APK, checksums, and packslip bundle.
+# usage/completions assets, Android APK, and checksums — then dispatch
+# keyless packslip signing (`.github/workflows/packslip-sign.yml`).
 #
 # Usage:
 #   scripts/publish-release.sh <version> [--dry-run] [--skip-android] [--skip-desktop] [--host-only]
 #
 # Env:
-#   PACKSLIP_KEY   Required (must be exported). Path to a packslip secret
-#                  key from `packslip keygen`.
-#   PACKSLIP_BIN   Optional path to the packslip CLI (else PATH / mise).
 #   HOST_TRIPLE    Override rustc host triple for --host-only builds.
-#
-# Deactivated GHA: `.github/workflows/release.yml` (workflow_dispatch only).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -169,66 +165,14 @@ fi
 
 ./scripts/checksums.sh
 
-echo "==> packslip create"
-PACKSLIP_BIN="${PACKSLIP_BIN:-}"
-if [[ -z "$PACKSLIP_BIN" ]]; then
-	if command -v packslip >/dev/null 2>&1; then
-		PACKSLIP_BIN="$(command -v packslip)"
-	elif [[ -x "${HOME}/.local/share/mise/installs/packslip/1.11.1/packslip" ]]; then
-		PACKSLIP_BIN="${HOME}/.local/share/mise/installs/packslip/1.11.1/packslip"
-	fi
-fi
-
-if [[ -z "${PACKSLIP_KEY:-}" ]]; then
-	echo "PACKSLIP_KEY is not set in the environment (export it, don't only assign)." >&2
-	echo "  export PACKSLIP_KEY=/path/to/packslip.key" >&2
-	echo "Generate a key with: packslip keygen" >&2
-	exit 1
-fi
-if [[ ! -f "$PACKSLIP_KEY" ]]; then
-	echo "PACKSLIP_KEY does not exist: $PACKSLIP_KEY" >&2
-	exit 1
-fi
-if [[ -z "$PACKSLIP_BIN" ]]; then
-	echo "packslip CLI not found (install packslip or set PACKSLIP_BIN)" >&2
-	exit 1
-fi
-
-url_base="https://github.com/ggallovalle/srcthread/releases/download/${TAG}"
-create_args=(
-	--project github.com/ggallovalle/srcthread
-	--version "$VERSION"
-	--bin srcthread
-	--url-base "$url_base"
-	--out dist
-	--key "$PACKSLIP_KEY"
-	--resource "cli-spec/usage=asset:dist/srcthread.usage.kdl"
-	--resource "completion/bash=asset:dist/srcthread.bash"
-	--resource "completion/zsh=asset:dist/srcthread.zsh"
-	--resource "completion/fish=asset:dist/srcthread.fish"
-	--resource "completion/powershell=asset:dist/srcthread.powershell"
-	--resource "man@linux=archive:srcthread/man/man1/srcthread.1"
-	--resource "man@darwin=archive:srcthread/man/man1/srcthread.1"
-)
-artifact_args=()
-shopt -s nullglob
-for f in dist/srcthread-"${VERSION}"-*.tar.gz; do
-	base="$(basename "$f")"
-	if [[ "$base" == *"-desktop.tar.gz" ]]; then
-		artifact_args+=("${f}@desktop")
-	else
-		artifact_args+=("$f")
-	fi
-done
-if [[ ${#artifact_args[@]} -eq 0 ]]; then
-	echo "no dist/srcthread-${VERSION}-*.tar.gz artifacts to sign" >&2
-	exit 1
-fi
-"$PACKSLIP_BIN" create "${create_args[@]}" "${artifact_args[@]}"
-ls -lh dist/packslip.sigstore.json
+# Never ship a key-signed packslip from this script — mise consumers of a
+# github.com project expect keyless OIDC. Sign after the release exists:
+#   gh workflow run packslip-sign.yml -f tag=v<version>
+rm -f dist/packslip.sigstore.json
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
-	echo "==> dry-run complete; artifacts in dist/ (packslip signed locally, not uploaded)"
+	echo "==> dry-run complete; artifacts in dist/"
+	echo "    (packslip is keyless via packslip-sign.yml after a real publish)"
 	ls -lh dist/
 	exit 0
 fi
@@ -242,18 +186,31 @@ git tag -a "$TAG" -m "$TAG"
 git push origin "refs/tags/$TAG"
 
 echo "==> GitHub release"
+shopt -s nullglob
 assets=(dist/*)
 gh release create "$TAG" "${assets[@]}" \
 	--title "$TAG" \
 	--notes-file "$NOTES_FILE" \
 	--verify-tag
 
-echo "==> packslip upload"
-gh release upload "$TAG" dist/packslip.sigstore.json --clobber
+echo "==> packslip-sign (keyless CI)"
+# Workflow file must already be on the default branch.
+gh workflow run packslip-sign.yml -f "tag=${TAG}"
+# Wait for the run we just kicked off (newest run of this workflow).
+sleep 3
+run_id="$(
+	gh run list --workflow=packslip-sign.yml --limit 1 --json databaseId --jq '.[0].databaseId'
+)"
+if [[ -z "$run_id" || "$run_id" == "null" ]]; then
+	echo "could not find packslip-sign run; check Actions tab" >&2
+	exit 1
+fi
+echo "watching run $run_id"
+gh run watch "$run_id" --exit-status
 
 cat <<EOF
 
-Published $TAG.
+Published $TAG with keyless packslip.
 
 Install (PC):
 

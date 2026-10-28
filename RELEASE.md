@@ -1,10 +1,11 @@
 # Releasing srcthread
 
-Releases are **manual**. Run `scripts/publish-release.sh` on a clean
-`main` checkout. The GitHub Actions workflow
-(`.github/workflows/release.yml`) is checked in but deactivated
-(`workflow_dispatch` only) — do not turn on tag-push until the script is
-retired.
+Releases are cut with `scripts/publish-release.sh` on a clean `main`
+checkout. That script builds/uploads assets, then dispatches
+[`.github/workflows/packslip-sign.yml`](.github/workflows/packslip-sign.yml)
+for keyless packslip (no `pubkey` for mise). The full
+[`.github/workflows/release.yml`](.github/workflows/release.yml) matrix
+stays deactivated.
 
 Design notes: [plans/06-packaging.md](plans/06-packaging.md),
 [research/09-mise-packaging-plugin.md](research/09-mise-packaging-plugin.md).
@@ -15,9 +16,6 @@ Design notes: [plans/06-packaging.md](plans/06-packaging.md),
 - Version in `crates/srcthread-cli/Cargo.toml` (and sibling crates) already
   bumped to the version you will publish — the script refuses a mismatch
 - Optional:
-  - `PACKSLIP_KEY` — **required** for a real publish (must be
-    `export`ed). Path to a packslip secret key (`packslip keygen`)
-  - `packslip` on `PATH` (or mise / `PACKSLIP_BIN`)
   - `ANDROID_HOME` / `ANDROID_SDK_ROOT` for the release APK
   - Extra `rustup` targets if you want more than the host triple
 
@@ -46,8 +44,7 @@ print(next(p["version"] for p in d["packages"] if p["name"] == "srcthread-cli"))
 
 ## Dry-run (recommended)
 
-Builds assets under `dist/` and runs `packslip create` (needs
-`export PACKSLIP_KEY`) — no tag, no `gh release` upload.
+Builds assets under `dist/` only — no tag, no `gh release`, no packslip.
 
 ```sh
 git checkout main && git pull
@@ -67,10 +64,7 @@ Useful flags:
 ## Publish
 
 ```sh
-export PACKSLIP_KEY=/path/to/packslip.key   # required; assign alone is not enough
-
-scripts/publish-release.sh 0.1.0
-# first machine / smoke: add --host-only
+scripts/publish-release.sh 0.1.0 --host-only   # or omit --host-only
 ```
 
 The script will:
@@ -79,15 +73,13 @@ The script will:
 2. Build platform tarballs (`default` and `desktop` when possible)
 3. Build `srcthread-<ver>-android.apk` when the SDK is present
 4. Write `dist/SHASUMS256.txt`
-5. Create annotated tag `v<ver>`, push it, and `gh release create` with
-   everything in `dist/`
-6. Run `packslip create` and upload `packslip.sigstore.json` (fails if
-   `PACKSLIP_KEY` is missing or not a file)
+5. Create annotated tag `v<ver>`, push it, and `gh release create`
+6. Dispatch `packslip-sign.yml` for that tag and wait until it is green
 
 Cross-OS triples are skipped when this host cannot build them (e.g. no
-Darwin archives from Linux). For a full matrix, run the script once per
-OS (or enable the deactivated workflow later) and attach any missing
-assets with `gh release upload`.
+Darwin archives from Linux). For a full matrix, run the publish script
+once per OS and attach missing assets with `gh release upload`, then
+re-run packslip-sign (or `gh workflow run packslip-sign.yml -f tag=…`).
 
 ## What ships
 
@@ -145,5 +137,5 @@ Prefer `publish-release.sh`. For debugging a single step:
 2. `release-notes/<version>.md` written
 3. `mise run check-ci` (or rely on green CI on `main`)
 4. Dry-run with `--host-only`
-5. Real publish with `export PACKSLIP_KEY=...`
-6. Spot-check the GitHub release assets and a packslip / APK install
+5. Real publish (`scripts/publish-release.sh` — waits on packslip-sign)
+6. Spot-check mise install (no `pubkey`) and the APK
