@@ -83,6 +83,45 @@ fn opencode_user_mcp_shape() {
 }
 
 #[test]
+fn json_install_preserves_comments_indent_and_siblings() {
+    let (_tmp, roots) = setup();
+    let path = Target::Cursor.config_path(Scope::User, &roots);
+    // 4-space indent, trailing comma, comment, and an unrelated sibling key.
+    fs::write(
+        &path,
+        r#"{
+    // keep me
+    "theme": "dark",
+    "mcpServers": {
+        "other": {
+            "command": "echo"
+        },
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    mcp_config::install(&path, Target::Cursor.format()).unwrap();
+    let text = fs::read_to_string(&path).unwrap();
+    assert!(text.contains("// keep me"), "comment lost:\n{text}");
+    assert!(text.contains("\"theme\": \"dark\""), "sibling lost:\n{text}");
+    assert!(
+        text.contains("    \"theme\""),
+        "indent rewritten:\n{text}"
+    );
+    assert!(text.contains("\"other\""), "existing server lost:\n{text}");
+    assert!(text.contains("\"srcthread\""), "server not added:\n{text}");
+
+    mcp_config::uninstall(&path, Target::Cursor.format()).unwrap();
+    let text = fs::read_to_string(&path).unwrap();
+    assert!(text.contains("// keep me"), "comment lost on uninstall:\n{text}");
+    assert!(text.contains("\"theme\": \"dark\""));
+    assert!(text.contains("\"other\""));
+    assert!(!text.contains("\"srcthread\""));
+}
+
+#[test]
 fn codex_toml_round_trip_preserves_other_keys() {
     let (_tmp, roots) = setup();
     let path = Target::Codex.config_path(Scope::User, &roots);
