@@ -60,9 +60,20 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
 fi
 
 TAG="v${VERSION}"
+NOTES_FILE="release-notes/${VERSION}.md"
 HOST_TRIPLE="${HOST_TRIPLE:-$(rustc -vV | awk '/^host:/{print $2}')}"
 
 echo "==> publish $TAG (dry_run=$DRY_RUN host_only=$HOST_ONLY)"
+
+if [[ ! -f "$NOTES_FILE" ]]; then
+	echo "missing release notes: $NOTES_FILE" >&2
+	echo "Write GitHub release notes there before publishing." >&2
+	exit 1
+fi
+if [[ ! -s "$NOTES_FILE" ]]; then
+	echo "release notes file is empty: $NOTES_FILE" >&2
+	exit 1
+fi
 
 if [[ "$DRY_RUN" -eq 0 ]]; then
 	if [[ -n "$(git status --porcelain)" ]]; then
@@ -80,7 +91,7 @@ pkg_version="$(cargo metadata --no-deps --format-version 1 |
 	python3 -c "import json,sys; d=json.load(sys.stdin); print([p['version'] for p in d['packages'] if p['name']=='srcthread-cli'][0])")"
 if [[ "$pkg_version" != "$VERSION" ]]; then
 	echo "Cargo.toml version is $pkg_version but publish asked for $VERSION" >&2
-	echo "bump crates/srcthread-cli (and workspace) version first" >&2
+	echo "bump with scripts/bump-version.py first" >&2
 	exit 1
 fi
 
@@ -158,29 +169,7 @@ fi
 
 ./scripts/checksums.sh
 
-if [[ "$DRY_RUN" -eq 1 ]]; then
-	echo "==> dry-run complete; artifacts in dist/"
-	ls -lh dist/
-	exit 0
-fi
-
-echo "==> tag $TAG"
-if git rev-parse "$TAG" >/dev/null 2>&1; then
-	echo "tag $TAG already exists" >&2
-	exit 1
-fi
-git tag -a "$TAG" -m "$TAG"
-git push origin "refs/tags/$TAG"
-
-echo "==> GitHub release"
-shopt -s nullglob
-assets=(dist/*)
-gh release create "$TAG" "${assets[@]}" \
-	--title "$TAG" \
-	--notes "PC: packslip install. Android: attach \`srcthread-${VERSION}-android.apk\`." \
-	--verify-tag
-
-echo "==> packslip"
+echo "==> packslip create"
 PACKSLIP_BIN="${PACKSLIP_BIN:-}"
 if [[ -z "$PACKSLIP_BIN" ]]; then
 	if command -v packslip >/dev/null 2>&1; then
@@ -222,6 +211,7 @@ create_args=(
 	--resource "man@darwin=archive:srcthread/man/man1/srcthread.1"
 )
 artifact_args=()
+shopt -s nullglob
 for f in dist/srcthread-"${VERSION}"-*.tar.gz; do
 	base="$(basename "$f")"
 	if [[ "$base" == *"-desktop.tar.gz" ]]; then
@@ -230,7 +220,35 @@ for f in dist/srcthread-"${VERSION}"-*.tar.gz; do
 		artifact_args+=("$f")
 	fi
 done
+if [[ ${#artifact_args[@]} -eq 0 ]]; then
+	echo "no dist/srcthread-${VERSION}-*.tar.gz artifacts to sign" >&2
+	exit 1
+fi
 "$PACKSLIP_BIN" create "${create_args[@]}" "${artifact_args[@]}"
+ls -lh dist/packslip.sigstore.json
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+	echo "==> dry-run complete; artifacts in dist/ (packslip signed locally, not uploaded)"
+	ls -lh dist/
+	exit 0
+fi
+
+echo "==> tag $TAG"
+if git rev-parse "$TAG" >/dev/null 2>&1; then
+	echo "tag $TAG already exists" >&2
+	exit 1
+fi
+git tag -a "$TAG" -m "$TAG"
+git push origin "refs/tags/$TAG"
+
+echo "==> GitHub release"
+assets=(dist/*)
+gh release create "$TAG" "${assets[@]}" \
+	--title "$TAG" \
+	--notes-file "$NOTES_FILE" \
+	--verify-tag
+
+echo "==> packslip upload"
 gh release upload "$TAG" dist/packslip.sigstore.json --clobber
 
 cat <<EOF

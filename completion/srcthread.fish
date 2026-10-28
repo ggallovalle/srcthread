@@ -10,7 +10,7 @@ end
 
 set _usage_spec_srcthread 'name srcthread
 bin srcthread
-version "0.1.0"
+version "0.2.0"
 about "Local-first research threads over pinned source mirrors."
 long_about #"""
 Local-first research threads over pinned source mirrors.

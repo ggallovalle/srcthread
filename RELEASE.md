@@ -30,6 +30,10 @@ Rust crates share `[workspace.package] version`; Android `versionName` /
 scripts/bump-version.py 0.1.1          # or: patch | minor | major
 ```
 
+Write GitHub release notes at `release-notes/<version>.md` (required;
+publish refuses to run without a non-empty file). Start from
+[release-notes/TEMPLATE.md](release-notes/TEMPLATE.md).
+
 Commit on `main` before publishing. Confirm what publish will require:
 
 ```sh
@@ -42,7 +46,8 @@ print(next(p["version"] for p in d["packages"] if p["name"] == "srcthread-cli"))
 
 ## Dry-run (recommended)
 
-Builds assets under `dist/` only — no tag, no `gh release`.
+Builds assets under `dist/` and runs `packslip create` (needs
+`export PACKSLIP_KEY`) — no tag, no `gh release` upload.
 
 ```sh
 git checkout main && git pull
@@ -137,7 +142,8 @@ Prefer `publish-release.sh`. For debugging a single step:
 ## Checklist
 
 1. Version bumped and on `main`
-2. `mise run check-ci` (or rely on green CI on `main`)
-3. Dry-run with `--host-only`
-4. Real publish with `export PACKSLIP_KEY=...`
-5. Spot-check the GitHub release assets and a packslip / APK install
+2. `release-notes/<version>.md` written
+3. `mise run check-ci` (or rely on green CI on `main`)
+4. Dry-run with `--host-only`
+5. Real publish with `export PACKSLIP_KEY=...`
+6. Spot-check the GitHub release assets and a packslip / APK install
