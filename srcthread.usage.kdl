@@ -264,7 +264,7 @@ cmd sync help="Sync stores via git or nearby peer transfer" subcommand_required=
         long_help #"""
 Git-backed store sync
 
-With no subcommand, shows git status (stub).
+With no subcommand, shows git status.
 """#
         flag "-h --help" help="Print help" action=help builtin=#true
         cmd push help="`git push` the active store" {
