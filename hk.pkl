@@ -63,6 +63,28 @@ local lintSteps = new Mapping<String, Step> {
   ["detekt"] = detekt
 }
 
+// Keep `srcthread.usage.kdl` + `completion/` aligned with the usage-rs CLI.
+// Pre-commit only (not lint/CI). Exclusive: cargo run shares the target dir
+// with clippy.
+local renderUsage = new Step {
+  glob = List(
+    "crates/srcthread-cli/**/*.rs",
+    "crates/srcthread-cli/Cargo.toml",
+    "srcthread.usage.kdl",
+    "completion/**"
+  )
+  depends = "cargo_fmt"
+  exclusive = true
+  stage = List(
+    "srcthread.usage.kdl",
+    "completion/_srcthread",
+    "completion/srcthread.bash",
+    "completion/srcthread.fish",
+    "completion/srcthread.ps1"
+  )
+  fix = "mise run render:usage"
+}
+
 hooks {
   // `mise run lint` / `hk run lint --all`
   ["lint"] {
@@ -80,10 +102,14 @@ hooks {
 
   // Commits: lint/format only so intentional failing tests can be committed.
   // Full `check` (including tests) is enforced by CI on PRs into main.
+  // `render_usage` regenerates the committed usage spec + shell completions.
   ["pre-commit"] {
     fix = true
     stage = true
     stash = "git"
-    steps = lintSteps
+    steps {
+      ...lintSteps
+      ["render_usage"] = renderUsage
+    }
   }
 }

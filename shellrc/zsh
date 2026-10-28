@@ -1,0 +1,61 @@
+# srcthread — zsh activation script
+#
+# Source this file from zsh to put a hot CLI on PATH and load completions:
+#
+#     source shellrc/zsh
+#
+# It prepends `shellrc/bin` (a cargo-run shim) to $path, adds `completion/`
+# to $fpath, marks the prompt, and defines `deactivate` to undo all of it.
+# Each `srcthread …` rebuilds as needed — no separate cargo build.
+
+# Refuse to run outside zsh. This guard stays POSIX so the message can be
+# printed under other shells before we use any zsh-only syntax.
+if [ -z "${ZSH_VERSION:-}" ]; then
+  echo 'shellrc/zsh: this script is for zsh only, source it from a zsh shell' >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+# Repo root and layout, derived from this file's own location
+# (`shellrc/zsh` → parent of `shellrc/`).
+local srcthread_root="${${(%):-%x}:A:h:h}"
+local srcthread_bin="${srcthread_root}/shellrc/bin"
+local srcthread_completion="${srcthread_root}/completion"
+
+# Capture the pristine state, then activate — only on first activation.
+if (( ! ${+SRCTHREAD_ACTIVE} )); then
+  export SRCTHREAD_OLD_PATH=$PATH
+  export SRCTHREAD_OLD_PROMPT=$PROMPT
+  typeset -g -a SRCTHREAD_OLD_FPATH
+  SRCTHREAD_OLD_FPATH=($fpath)
+
+  export SRCTHREAD_ACTIVE=$srcthread_bin
+  # $path is an array tied to $PATH, so this updates both.
+  path=($srcthread_bin $path)
+  fpath=($srcthread_completion $fpath)
+
+  # Register zsh completion even if compinit already ran.
+  autoload -Uz _srcthread
+  if (( $+functions[compdef] )); then
+    compdef _srcthread srcthread
+  elif (( ${+_comps} )); then
+    _comps[srcthread]=_srcthread
+  fi
+fi
+
+# Mark the prompt so it's obvious the environment is active.
+PROMPT="(srcthread) $SRCTHREAD_OLD_PROMPT"
+
+function deactivate {
+  if (( ! ${+SRCTHREAD_ACTIVE} )); then
+    print -u2 'srcthread: not active'
+    return 1
+  fi
+
+  PATH=$SRCTHREAD_OLD_PATH
+  PROMPT=$SRCTHREAD_OLD_PROMPT
+  fpath=($SRCTHREAD_OLD_FPATH)
+  (( ${+_comps} )) && unset '_comps[srcthread]'
+  unfunction _srcthread 2>/dev/null
+  unset SRCTHREAD_ACTIVE SRCTHREAD_OLD_PATH SRCTHREAD_OLD_PROMPT SRCTHREAD_OLD_FPATH
+  unfunction deactivate
+}

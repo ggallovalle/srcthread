@@ -1,0 +1,262 @@
+name srcthread
+bin srcthread
+version "0.1.0"
+about "Local-first research threads over pinned source mirrors."
+long_about #"""
+Local-first research threads over pinned source mirrors.
+
+Declare stores, pin source mirrors, and keep research threads with
+anchors and offline excerpts. The same binary runs the socket daemon
+(`srcthread daemon`) and the rune desktop UI (`srcthread desktop`).
+"""#
+subcommand_required #true
+flag "-C --cd" help="Change to DIR before running (and prefer its store, later)" global=#true {
+    arg <DIR>
+}
+flag --store help="Active store name or path (overrides default selection)" global=#true {
+    arg <STORE>
+}
+flag "-q --quiet" help="Suppress non-error messages" global=#true
+flag "-v --verbose" help="Extra output (-vv for more)" global=#true count=#true var=#true
+flag "-y --yes" help="Answer yes to confirmation prompts" global=#true
+flag "-h --help" help="Print help" action=help builtin=#true
+flag "-V --version" help="Print version" action=version builtin=#true
+cmd daemon help="Run or control the local socket daemon" {
+    alias d
+    long_help #"""
+Run or control the local socket daemon
+
+With no subcommand, runs the daemon in the foreground (herdr-style:
+`srcthread daemon` *is* the server process). Use `stop` / `status` against
+a running instance.
+"""#
+    flag --socket help="Unix socket path (default: `$XDG_RUNTIME_DIR/srcthread.sock`)" global=#true {
+        arg <PATH>
+    }
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd stop help="Stop a running daemon via the socket" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd status help="Show daemon reachability and socket path" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+}
+cmd desktop help="Open the rune desktop UI" {
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
+cmd store help="Manage file-canonical research stores (git vaults)" {
+    long_help #"""
+Manage file-canonical research stores (git vaults)
+
+With no subcommand, prints the active store path (stub).
+"""#
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd init help="Create a new file-canonical store directory" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <PATH> help="Directory for the new store (git vault)"
+    }
+    cmd list help="List known stores" {
+        alias ls
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd use help="Select the active store" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <STORE> help="Store name or path"
+    }
+    cmd path help="Print the active store path" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+}
+cmd thread help="Research threads (primary object)" {
+    alias t
+    long_help #"""
+Research threads (primary object)
+
+With no subcommand, lists threads.
+"""#
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd list help="List research threads" {
+        alias ls
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd show help="Show one thread" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <ID> help="Thread id"
+    }
+    cmd new help="Create a research thread" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <TITLE> help="Short id/title for the research thread"
+    }
+    cmd edit help="Edit thread metadata / notes" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <ID> help="Thread id"
+    }
+    cmd rm help="Remove a thread" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <ID> help="Thread id"
+    }
+}
+cmd anchor help="Anchors into mirrored source at a pinned revision" subcommand_required=#true {
+    alias a
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd add help="Add an anchor (repo@sha path line/span or symbol)" {
+        flag --thread help="Thread id" required=#true {
+            arg <THREAD>
+        }
+        flag --repo help="Upstream repo URL or mirror id" required=#true {
+            arg <REPO>
+        }
+        flag --sha help="Pinned commit SHA" required=#true {
+            arg <SHA>
+        }
+        flag --path help="Path inside the repo" required=#true {
+            arg <PATH>
+        }
+        flag --line help="Optional 1-based line" {
+            arg <LINE>
+        }
+        flag --symbol help="Optional symbol name (e.g. op_get_env)" {
+            arg <SYMBOL>
+        }
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd list help="List anchors in a thread" {
+        alias ls
+        flag --thread help="Thread id" required=#true {
+            arg <THREAD>
+        }
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd show help="Show one anchor" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <ID> help="Anchor id"
+    }
+    cmd open help="Print path:line for editor open (nvim)" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <ID> help="Anchor id"
+    }
+}
+cmd excerpt help="Offline frozen excerpts around anchors" subcommand_required=#true {
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd add help="Freeze an offline excerpt around an anchor" {
+        flag --anchor help="Anchor id to excerpt" required=#true {
+            arg <ANCHOR>
+        }
+        flag --context help="Context lines before/after" default="10" {
+            arg <CONTEXT>
+        }
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd show help="Show excerpt body" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <ID> help="Excerpt id"
+    }
+}
+cmd ref help="External refs (PR, issue, doc, chat)" subcommand_required=#true {
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd add help="Attach a URL or pasted transcript ref to a thread" {
+        flag --thread help="Thread id" required=#true {
+            arg <THREAD>
+        }
+        flag --url help="URL (PR, issue, doc, chat)" {
+            arg <URL>
+        }
+        flag --file help="Optional local transcript / note path to ingest" {
+            arg <FILE>
+        }
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd list help="List refs on a thread" {
+        alias ls
+        flag --thread help="Thread id" required=#true {
+            arg <THREAD>
+        }
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+}
+cmd mirror help="Shared upstream mirror cache" {
+    long_help #"""
+Shared upstream mirror cache
+
+With no subcommand, lists cached mirrors (stub).
+"""#
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd add help="Register / fetch an upstream repo into the mirror cache" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <REPO> help="Git URL or owner/repo"
+    }
+    cmd list help="List cached mirrors" {
+        alias ls
+        flag "-h --help" help="Print help" action=help builtin=#true
+    }
+    cmd path help="Print local path for a mirror@sha" {
+        flag --sha help="Optional SHA" {
+            arg <SHA>
+        }
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <REPO> help="Mirror id or repo"
+    }
+    cmd fetch help="Fetch updates for a mirror" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <REPO> help="Mirror id or repo"
+    }
+}
+cmd search help="Search threads or anchors in the active store" subcommand_required=#true {
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd threads help="Search research threads" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <QUERY> help="Query string"
+    }
+    cmd anchors help="Search anchors" {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        arg <QUERY> help="Query string"
+    }
+}
+cmd sync help="Sync stores via git or nearby peer transfer" subcommand_required=#true {
+    flag "-h --help" help="Print help" action=help builtin=#true
+    cmd git help="Git-backed store sync" {
+        long_help #"""
+Git-backed store sync
+
+With no subcommand, shows git status (stub).
+"""#
+        flag "-h --help" help="Print help" action=help builtin=#true
+        cmd push help="`git push` the active store" {
+            flag "-h --help" help="Print help" action=help builtin=#true
+        }
+        cmd pull help="`git pull` the active store" {
+            flag "-h --help" help="Print help" action=help builtin=#true
+        }
+        cmd status help="Show git status of the active store" {
+            flag "-h --help" help="Print help" action=help builtin=#true
+        }
+    }
+    cmd peer help="Nearby peer transfer (Localsend-like)" subcommand_required=#true {
+        flag "-h --help" help="Print help" action=help builtin=#true
+        cmd discover help="Discover nearby peers" {
+            flag "-h --help" help="Print help" action=help builtin=#true
+        }
+        cmd send help="Send store or selected threads to a peer" {
+            flag --peer help="Peer id from discover" required=#true {
+                arg <PEER>
+            }
+            flag --thread help="Optional thread id (default: whole store)" {
+                arg <THREAD>
+            }
+            flag "-h --help" help="Print help" action=help builtin=#true
+        }
+        cmd receive help="Receive a store/threads transfer" {
+            flag "-h --help" help="Print help" action=help builtin=#true
+        }
+    }
+}
+cmd mcp help="Run the MCP stdio server (stub)" {
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
+cmd doctor help="Environment / daemon / store health checks" {
+    alias dr
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
+cmd hello help="Hello-world: daemon socket if up, else in-process lib" {
+    flag "-h --help" help="Print help" action=help builtin=#true
+}
