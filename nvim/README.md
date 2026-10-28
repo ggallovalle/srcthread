@@ -1,11 +1,9 @@
 # srcthread (Neovim)
 
-Minimal Neovim integration for srcthread.
+Thin Neovim client for the `srcthread` CLI / daemon (same idea as fff.nvim
+talking to its rust core: Lua stays thin, the engine owns state).
 
 ## lazy.nvim
-
-Add to your spec (adjust `dir` to this repo’s `nvim/` folder or a
-copy on your machine):
 
 ```lua
 {
@@ -18,16 +16,20 @@ copy on your machine):
 },
 ```
 
-Ensure `nvim/lua` is on your runtime path. With `dir` pointing at
-`nvim/`, lazy.nvim typically adds `lua/` automatically.
+Put `srcthread` on `PATH` (or set `SRCTHREAD_BIN`). The plugin shells out to
+the CLI, which prefers the daemon socket when up.
 
-## API (today)
+## Hello-world API
 
-- `require("srcthread").hello()` — notifies `srcthread: hello`
-- `require("srcthread").open_anchor(path, line?)` — `:edit` path and
-  optional cursor line
+| Call | Kind |
+| --- | --- |
+| `require("srcthread").hello()` | query |
+| `require("srcthread").list_threads()` | query |
+| `require("srcthread").create_thread(id?)` | mutation |
+| `require("srcthread").open_anchor(path, line?)` | editor helper |
 
-## Commands (planned)
+## Commands
 
-- `:SrcthreadHello` — call `hello()`
-- `:SrcthreadThreads` — list or jump to threads (not implemented yet)
+- `:SrcthreadHello` — query greeting
+- `:SrcthreadThreads` — query thread list
+- `:SrcthreadThreadNew [id]` — mutation create thread

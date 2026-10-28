@@ -23,20 +23,22 @@ run = [
   "rumdl fmt --check --diff .",
   "rumdl check .",
   "tombi format --quiet --check --diff .",
+  "mise run detekt",
 ]
 
-# CI cargo matrix: Rust workspace only.
-# Skips android/desktop GUI (no Android SDK / Wayland GUI in CI).
+# CI cargo matrix: PC libs + CLI without the rune desktop feature
+# (GHA lacks Wayland/Vulkan link deps). Android APK is local-only.
+# Full local GUI: `cargo build -p srcthread-cli` (default features).
 [tasks."clippy-ci"]
-description = "Clippy the Rust workspace (no android/desktop GUI)"
+description = "Clippy CI packages (no rune desktop / Android)"
 run = [
-  "cargo clippy --workspace --all-targets -- -D warnings",
+  "cargo clippy -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features --all-targets -- -D warnings",
 ]
 
 [tasks."test-ci"]
-description = "Test the Rust workspace (no android/desktop GUI)"
+description = "Test CI packages (no rune desktop / Android)"
 run = [
-  "cargo test --workspace",
+  "cargo test -p srcthread -p srcthread-daemon -p srcthread-mcp -p srcthread-uniffi -p srcthread-cli --no-default-features",
 ]
 
 [tasks."check-ci"]
@@ -53,3 +55,36 @@ run = "mise run check-ci"
 [tasks."pre-commit"]
 description = "Run the hk pre-commit hook (lint/format only)"
 run = "hk run pre-commit"
+
+[tasks.detekt]
+description = "Run Android detekt (ktlint wrapper) via Gradle"
+dir = "{{config_root}}/apps/android"
+run = """
+if [ -z "${ANDROID_HOME:-}${ANDROID_SDK_ROOT:-}" ]; then
+  echo "skip detekt (no Android SDK)"
+  exit 0
+fi
+./gradlew :app:detekt
+"""
+
+[tasks."android-emulator"]
+description = "Start the default Android emulator via android CLI (blocks until ready)"
+run = [
+  "android emulator start ${SRCTHREAD_AVD:-Pixel_9_API_37.2}",
+]
+
+[tasks."android-uniffi"]
+description = "Generate UniFFI Kotlin bindings + NDK libs into the Android app"
+dir = "{{config_root}}/apps/android"
+run = [
+  "./gradlew bootstrapUniffi cargoNdkUniffi",
+]
+
+[tasks."android-start"]
+description = "Build, install, and launch the Android app via android CLI"
+dir = "{{config_root}}/apps/android"
+run = [
+  "./gradlew :app:assembleDebug",
+  "android install --apks app/build/outputs/apk/debug/app-debug.apk",
+  "adb shell am start -n dev.kbroom.srcthread/.MainActivity",
+]

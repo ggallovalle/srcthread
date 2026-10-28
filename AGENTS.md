@@ -6,23 +6,33 @@ Arch. Repo may stay private; treat history as if it could become public.
 ## Application stack
 
 - Rust + `tokio` — async engine and daemon I/O.
-- `usage-rs` — typed CLIs from Rust structs/enums (prefer over clap).
-- `rune` later — GPU desktop UI (wgpu/winit), plain Rust views.
-- UniFFI later — bind the Rust lib into the Kotlin/Gradle Android app.
+- `usage-rs` — typed CLIs from Rust structs/enums for every CLI surface.
+  Prefer over clap or plain `env::args_os()`.
+- `rune` — GPU desktop UI (wgpu/winit), plain Rust views; opened via
+  `srcthread desktop`.
+- UniFFI — bind the Rust lib into the Kotlin/Compose Android app.
 
 The `srcthread` crate is the only source-of-truth engine. Daemon, CLI, nvim,
 desktop, Android, and MCP call it (in-process or over the socket).
+
+## Single PC binary (herdr-shaped)
+
+`srcthread` is the **only** user-facing PC executable. Daemon, desktop, and
+MCP are libraries entered as subcommands (`srcthread daemon`,
+`srcthread desktop`, `srcthread mcp`). See
+`research/08-herdr-single-binary.md`. Do not add a second product `[[bin]]`
+for the daemon or GUI.
 
 ## Layout
 
 - `research/` — notes behind decisions
 - `plans/` — phased roadmap and surface sketches
 - `crates/srcthread` — lib facade + store
-- `crates/srcthread-daemon` — Unix-socket daemon (`srcthreadd`)
-- `crates/srcthread-cli` — thin CLI over the socket (mise-shaped `src/cli/`)
-- `crates/srcthread-mcp` — MCP tools for agents
-- `apps/desktop` — rune desktop app
-- `apps/android` — Kotlin + Gradle UI; UniFFI to Rust later
+- `crates/srcthread-daemon` — socket daemon **library**
+- `crates/srcthread-cli` — sole PC binary (`src/cli/` mise-shaped)
+- `crates/srcthread-mcp` — MCP **library** (stdio stub)
+- `apps/desktop` — rune desktop **library**
+- `apps/android` — Kotlin + Jetpack Compose; UniFFI to Rust
 - `nvim/` — Neovim plugin (picker / open-at-line)
 
 ## Commands
@@ -30,9 +40,11 @@ desktop, Android, and MCP call it (in-process or over the socket).
 - `mise run check`
 - `mise run lint`
 - `mise run lint-all`
-- `mise run check-ci` — what GitHub Actions runs
+- `mise run check-ci` — what GitHub Actions runs (no rune desktop feature)
 
-CI covers the Rust workspace only (skip android/desktop GUI matrix).
+CI covers the Rust libs + CLI with `--no-default-features` (skip rune / Android
+SDK). Local full GUI: `cargo build -p srcthread-cli` (default `desktop`
+feature).
 
 ## Git work
 

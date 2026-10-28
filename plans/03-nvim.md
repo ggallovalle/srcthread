@@ -7,7 +7,7 @@ line without re-indexing the world on every keystroke.
 
 - Pick a **thread**, then an **anchor** (or search across open store).
 - **Open at line** — `edit` + cursor (already stubbed as `open_anchor`).
-- Talk to `srcthreadd` over the socket (fallback: in-process later if needed).
+- Talk to `srcthread daemon` over the socket (fallback: in-process later if needed).
 
 ## Commands (planned)
 

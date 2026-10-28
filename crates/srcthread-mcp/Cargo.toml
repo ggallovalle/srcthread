@@ -3,11 +3,9 @@ name = "srcthread-mcp"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
-description = "MCP server for srcthread (stdio stub)"
+description = "MCP server library for srcthread (entered via `srcthread mcp`)"
 license.workspace = true
 
-[[bin]]
-name = "srcthread-mcp"
-path = "src/main.rs"
-
 [dependencies]
+serde_json = { workspace = true }
+srcthread = { workspace = true }

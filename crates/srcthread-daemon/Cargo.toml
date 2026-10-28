@@ -3,12 +3,8 @@ name = "srcthread-daemon"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
-description = "Unix-socket NDJSON daemon for srcthread"
+description = "Unix-socket NDJSON daemon library for srcthread (entered via `srcthread daemon`)"
 license.workspace = true
-
-[[bin]]
-name = "srcthreadd"
-path = "src/main.rs"
 
 [dependencies]
 serde = { workspace = true }

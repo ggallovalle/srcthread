@@ -1,20 +1,12 @@
-# srcthread (desktop)
+# srcthread desktop
 
-Planned: a **Rune** (wgpu + winit) UI targeting **Linux Wayland**,
-wired to the same Rust core as the daemon and mobile clients.
-
-For now the `apps/desktop` crate is a **hello binary** placeholder
-until the Rune shell lands.
-
-## Run
-
-From the repo root:
+Rune (wgpu/winit) UI library. Launch with:
 
 ```sh
-cargo run -p srcthread-desktop
+cargo run -p srcthread-cli --features desktop -- desktop
+# or, with default features:
+srcthread desktop
 ```
 
-## Direction
-
-- Thread list and anchor navigation in native UI
-- Share logic with `crates/srcthread` (no duplicate domain rules)
+There is no separate `srcthread-desktop` binary — the CLI is the sole PC
+entrypoint (`research/08-herdr-single-binary.md`).

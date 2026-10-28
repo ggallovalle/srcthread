@@ -1,16 +1,62 @@
-//! `srcthreadd` — Unix socket NDJSON daemon (herdr-shaped protocol).
+//! Socket NDJSON daemon library (herdr-shaped protocol).
+//!
+//! Entered from the `srcthread` CLI via `srcthread daemon` — same product
+//! name, no trailing-`d` daemon binary. See
+//! `research/08-herdr-single-binary.md`.
 //!
 //! Requests: newline-delimited JSON `{"id","method","params"}`.
 //! Responses: `{"id","result"}` or `{"id","error"}`.
 
 use std::env;
 use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use srcthread::Srcthread;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
+
+/// Options for [`run`].
+#[derive(Debug, Clone)]
+pub struct RunOpts {
+    /// Unix socket path. `None` → [`default_socket_path`].
+    pub socket: Option<PathBuf>,
+    /// Reserved for future daemonize; hello-world always foregrounds.
+    pub foreground: bool,
+}
+
+impl Default for RunOpts {
+    fn default() -> Self {
+        Self {
+            socket: None,
+            foreground: true,
+        }
+    }
+}
+
+/// Default socket: `$XDG_RUNTIME_DIR/srcthread.sock` or `/tmp/srcthread.sock`.
+pub fn default_socket_path() -> PathBuf {
+    env::var_os("XDG_RUNTIME_DIR")
+        .map(|dir| PathBuf::from(dir).join("srcthread.sock"))
+        .unwrap_or_else(|| PathBuf::from("/tmp/srcthread.sock"))
+}
+
+/// Run the daemon until the process exits (foreground listen loop).
+pub fn run(opts: RunOpts) -> ExitCode {
+    let socket_path = opts.socket.unwrap_or_else(default_socket_path);
+    let _ = opts.foreground;
+    match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt.block_on(serve(socket_path)),
+        Err(err) => {
+            eprintln!("failed to start runtime: {err}");
+            ExitCode::from(1)
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct Request {
@@ -29,46 +75,20 @@ struct Response {
     error: Option<Value>,
 }
 
-fn default_socket_path() -> PathBuf {
-    env::var_os("XDG_RUNTIME_DIR")
-        .map(|dir| PathBuf::from(dir).join("srcthread.sock"))
-        .unwrap_or_else(|| PathBuf::from("/tmp/srcthread.sock"))
-}
-
-fn parse_args() -> (PathBuf, bool) {
-    let mut socket = default_socket_path();
-    let mut foreground = false;
-    let mut args = env::args().skip(1);
-    while let Some(arg) = args.next() {
-        match arg.as_str() {
-            "--socket" => {
-                if let Some(path) = args.next() {
-                    socket = PathBuf::from(path);
-                }
-            }
-            "--foreground" => foreground = true,
-            "--help" | "-h" => {
-                eprintln!(
-                    "Usage: srcthreadd [--socket PATH] [--foreground]\n\
-                     Default socket: $XDG_RUNTIME_DIR/srcthread.sock or /tmp/srcthread.sock"
-                );
-                std::process::exit(0);
-            }
-            other => {
-                eprintln!("unknown argument: {other}");
-                std::process::exit(2);
-            }
-        }
-    }
-    let _ = foreground; // stub: always runs in foreground for hello-world
-    (socket, foreground)
-}
-
-fn handle_method(engine: &Srcthread, method: &str, _params: &Value) -> Result<Value, String> {
+fn handle_method(engine: &Srcthread, method: &str, params: &Value) -> Result<Value, String> {
     match method {
         "ping" => Ok(json!("pong")),
         "hello" => Ok(json!(engine.hello())),
         "thread.list" => Ok(json!(engine.list_threads())),
+        "thread.create" => {
+            let id = params
+                .get("id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "params.id required".to_string())?;
+            engine.create_thread(id).map_err(|e| e.to_string())?;
+            Ok(json!({ "id": id }))
+        }
+        "server.stop" => Err("server.stop not implemented in hello-world".into()),
         other => Err(format!("unknown method: {other}")),
     }
 }
@@ -122,21 +142,19 @@ fn prepare_socket(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() {
-    let (socket_path, _foreground) = parse_args();
+async fn serve(socket_path: PathBuf) -> ExitCode {
     let engine = Srcthread::open_memory();
 
     if let Err(err) = prepare_socket(&socket_path) {
         eprintln!("failed to prepare socket {}: {err}", socket_path.display());
-        std::process::exit(1);
+        return ExitCode::from(1);
     }
 
     let listener = match UnixListener::bind(&socket_path) {
         Ok(l) => l,
         Err(err) => {
             eprintln!("failed to bind {}: {err}", socket_path.display());
-            std::process::exit(1);
+            return ExitCode::from(1);
         }
     };
 

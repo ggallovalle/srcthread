@@ -1,9 +1,8 @@
 //! Shared CLI helpers (stubs + daemon socket).
 
-use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use serde_json::{Value, json};
@@ -13,16 +12,25 @@ pub(crate) fn stub(name: &str) -> ExitCode {
     ExitCode::from(2)
 }
 
-pub(crate) fn default_socket_path() -> PathBuf {
-    env::var_os("XDG_RUNTIME_DIR")
-        .map(|dir| PathBuf::from(dir).join("srcthread.sock"))
-        .unwrap_or_else(|| PathBuf::from("/tmp/srcthread.sock"))
+pub(crate) fn resolve_socket_path(socket: Option<PathBuf>) -> PathBuf {
+    socket.unwrap_or_else(srcthread_daemon::default_socket_path)
 }
 
-pub(crate) fn daemon_call(method: &str, params: Value) -> Result<Value, String> {
-    let path = default_socket_path();
+pub(crate) fn daemon_call(
+    method: &str,
+    params: Value,
+    socket: Option<&Path>,
+) -> Result<Value, String> {
+    let owned;
+    let path = match socket {
+        Some(p) => p,
+        None => {
+            owned = srcthread_daemon::default_socket_path();
+            owned.as_path()
+        }
+    };
     let mut stream =
-        UnixStream::connect(&path).map_err(|e| format!("connect {}: {e}", path.display()))?;
+        UnixStream::connect(path).map_err(|e| format!("connect {}: {e}", path.display()))?;
     let req = json!({
         "id": 1,
         "method": method,

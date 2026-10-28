@@ -2,15 +2,15 @@ use std::process::ExitCode;
 
 use usage_rs::{Args, Run};
 
-use crate::cli::util::stub;
-
+/// Run the MCP stdio server (stub)
 #[derive(Args)]
-pub(crate) struct Start {}
+#[usage(verbatim_doc_comment)]
+pub(crate) struct Mcp {}
 
-impl Run for Start {
+impl Run for Mcp {
     type Output = ExitCode;
 
     fn run(self) -> Self::Output {
-        stub("daemon start")
+        srcthread_mcp::run()
     }
 }

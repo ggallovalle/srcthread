@@ -4,44 +4,91 @@
 //! The daemon, CLI, MCP server, and desktop UI all call into this library;
 //! they do not own persistence or domain logic themselves.
 //!
-//! Hello-world builds expose an in-memory [`Srcthread`] / [`Store`] facade.
+//! Hello-world builds expose an in-memory [`Srcthread`] / [`Store`] facade
+//! with at least one **query** ([`Srcthread::list_threads`]) and one
+//! **mutation** ([`Srcthread::create_thread`]).
 
-/// In-memory store handle (hello-world stub).
-#[derive(Debug, Default, Clone)]
-pub struct Store {
-    demo_thread: Option<String>,
+use std::sync::{Arc, Mutex};
+
+use thiserror::Error;
+
+/// Errors from the in-memory hello-world store.
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum Error {
+    /// Thread id already exists.
+    #[error("thread already exists: {0}")]
+    ThreadExists(String),
+    /// Empty thread id.
+    #[error("thread id must not be empty")]
+    EmptyThreadId,
 }
 
-/// Facade over a [`Store`]. Created with [`Srcthread::open_memory`] for tests and local use.
-#[derive(Debug, Default, Clone)]
+/// In-memory store handle (hello-world stub).
+#[derive(Debug, Default)]
+pub struct Store {
+    threads: Vec<String>,
+}
+
+/// Facade over a [`Store`]. Created with [`Srcthread::open_memory`] for tests
+/// and local use. Cheap to clone: shares the store via [`Arc`].
+#[derive(Debug, Clone)]
 pub struct Srcthread {
-    store: Store,
+    store: Arc<Mutex<Store>>,
+}
+
+impl Default for Srcthread {
+    fn default() -> Self {
+        Self::open_memory()
+    }
 }
 
 impl Srcthread {
     /// Open an in-memory engine (no disk). Suitable for hello-world and unit tests.
     pub fn open_memory() -> Self {
         Self {
-            store: Store {
-                demo_thread: Some("demo-thread".to_string()),
-            },
+            store: Arc::new(Mutex::new(Store {
+                threads: vec!["demo-thread".to_string()],
+            })),
         }
     }
 
-    /// Returns the project greeting token.
+    /// Returns the project greeting token (query).
     pub fn hello(&self) -> &'static str {
         "srcthread"
     }
 
-    /// List known thread ids (demo stub may return one id or empty).
+    /// List known thread ids (query).
     pub fn list_threads(&self) -> Vec<String> {
-        self.store.demo_thread.iter().cloned().collect()
+        self.store.lock().expect("store lock").threads.clone()
     }
 
-    /// Borrow the underlying store.
-    pub fn store(&self) -> &Store {
-        &self.store
+    /// Create a research thread id (mutation).
+    pub fn create_thread(&self, id: impl Into<String>) -> Result<(), Error> {
+        let id = id.into();
+        if id.trim().is_empty() {
+            return Err(Error::EmptyThreadId);
+        }
+        let mut store = self.store.lock().expect("store lock");
+        if store.threads.iter().any(|t| t == &id) {
+            return Err(Error::ThreadExists(id));
+        }
+        store.threads.push(id);
+        Ok(())
     }
+
+    /// Borrow a snapshot of the underlying store (clone of thread ids).
+    pub fn store(&self) -> StoreSnapshot {
+        StoreSnapshot {
+            threads: self.list_threads(),
+        }
+    }
+}
+
+/// Read-only snapshot of store contents.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoreSnapshot {
+    /// Thread ids currently in the store.
+    pub threads: Vec<String>,
 }
 
 #[cfg(test)]
@@ -50,11 +97,18 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn open_memory_hello_and_list() {
+    fn open_memory_hello_list_and_create() {
         let eng = Srcthread::open_memory();
         assert_eq!(eng.hello(), "srcthread");
-        let threads = eng.list_threads();
-        assert!(!threads.is_empty());
-        assert_eq!(threads[0], "demo-thread");
+        assert_eq!(eng.list_threads(), vec!["demo-thread".to_string()]);
+        eng.create_thread("from-test").unwrap();
+        assert_eq!(
+            eng.list_threads(),
+            vec!["demo-thread".to_string(), "from-test".to_string()]
+        );
+        assert_eq!(
+            eng.create_thread("from-test"),
+            Err(Error::ThreadExists("from-test".into()))
+        );
     }
 }

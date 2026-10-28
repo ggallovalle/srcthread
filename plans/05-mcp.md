@@ -22,5 +22,5 @@ Writes (`add_anchor`, `add_note`) can follow once read tools prove useful.
 
 ## Process
 
-Prefer attaching to `srcthreadd` (same NDJSON) so MCP shares the warm index
+Prefer attaching to `srcthread daemon` (same NDJSON) so MCP shares the warm index
 with nvim/CLI. Standalone embed of the lib is a fallback for CI/tests.
