@@ -1,97 +1,124 @@
-#!/usr/bin/env bash
-#MISE description="Build, install, and launch the Android app on emulator and/or device"
-#USAGE flag "--emulator" help="Target reachable emulators only (fail if none)"
-#USAGE flag "--device" help="Target reachable physical devices only (fail if none)"
-#USAGE flag "--force" help="Allow installing over a higher versionCode (pm -d)"
-set -euo pipefail
+#!/usr/bin/env bun
+// vim: set ft=typescript:
+//MISE description="Build, install, and launch the Android app on emulator and/or device"
+//USAGE flag "--emulator" help="Target reachable emulators only (fail if none)"
+//USAGE flag "--device" help="Target reachable physical devices only (fail if none)"
+//USAGE flag "--force" help="Allow installing over a higher versionCode (pm -d)"
 
-apk="apps/android/build/outputs/apk/debug/android-debug.apk"
-# Debug APK uses applicationIdSuffix=.dev (side-by-side with non-dev installs).
-activity="dev.kbroom.srcthread.dev/dev.kbroom.srcthread.MainActivity"
+import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
 
-want_emulator="${usage_emulator:-false}"
-want_device="${usage_device:-false}"
-force="${usage_force:-false}"
-# Neither flag → infer both kinds that are currently reachable.
-if [ "$want_emulator" != "true" ] && [ "$want_device" != "true" ]; then
-  want_emulator=true
-  want_device=true
-  infer=true
-else
-  infer=false
-fi
+const APK = "apps/android/build/outputs/apk/debug/android-debug.apk";
+// Debug APK uses applicationIdSuffix=.dev (side-by-side with non-dev installs).
+const ACTIVITY = "dev.kbroom.srcthread.dev/dev.kbroom.srcthread.MainActivity";
 
-install_opts=()
-if [ "$force" = "true" ]; then
-  install_opts+=(--install-options=-d)
-fi
+/** Mirrors //USAGE above. */
+export type Command = {
+  emulator: boolean;
+  device: boolean;
+  force: boolean;
+};
 
-online_serials() {
-  adb devices | awk 'NR>1 && $2=="device" {print $1}'
+export function parseCommand(
+  env: NodeJS.ProcessEnv = process.env,
+): Command {
+  return {
+    emulator: env.usage_emulator === "true",
+    device: env.usage_device === "true",
+    force: env.usage_force === "true",
+  };
 }
 
-emulators=()
-devices=()
-while IFS= read -r serial; do
-  [ -z "$serial" ] && continue
-  case "$serial" in
-    emulator-*) emulators+=("$serial") ;;
-    *) devices+=("$serial") ;;
-  esac
-done < <(online_serials)
+async function onlineSerials(cwd: string): Promise<string[]> {
+  const text = await Bun.$`adb devices`.cwd(cwd).text();
+  const serials: string[] = [];
+  for (const line of text.split("\n").slice(1)) {
+    const [serial, status] = line.trim().split(/\s+/);
+    if (serial && status === "device") serials.push(serial);
+  }
+  return serials;
+}
 
-# Optional handset pin (ignored for emulators).
-pinned="${SRCTHREAD_ANDROID_SERIAL:-${ANDROID_SERIAL:-}}"
-if [ -n "$pinned" ]; then
-  filtered=()
-  for serial in "${devices[@]+"${devices[@]}"}"; do
-    if [ "$serial" = "$pinned" ]; then
-      filtered+=("$serial")
-    fi
-  done
-  devices=("${filtered[@]+"${filtered[@]}"}")
-fi
+export async function main(command: Command, mise: MiseEnv): Promise<number> {
+  let wantEmulator = command.emulator;
+  let wantDevice = command.device;
+  let infer = false;
+  // Neither flag → infer both kinds that are currently reachable.
+  if (!wantEmulator && !wantDevice) {
+    wantEmulator = true;
+    wantDevice = true;
+    infer = true;
+  }
 
-targets=()
-if [ "$want_emulator" = "true" ]; then
-  if [ "${#emulators[@]}" -eq 0 ]; then
-    if [ "$infer" = "true" ]; then
-      :
-    else
-      echo "No reachable Android emulator (adb status=device)" >&2
-      exit 1
-    fi
-  else
-    targets+=("${emulators[@]}")
-  fi
-fi
-if [ "$want_device" = "true" ]; then
-  if [ "${#devices[@]}" -eq 0 ]; then
-    if [ "$infer" = "true" ]; then
-      :
-    else
-      if [ -n "$pinned" ]; then
-        echo "Pinned device $pinned is not reachable (adb status=device)" >&2
-      else
-        echo "No reachable physical Android device (adb status=device)" >&2
-      fi
-      exit 1
-    fi
-  else
-    targets+=("${devices[@]}")
-  fi
-fi
+  const serials = await onlineSerials(mise.projectRoot);
+  const emulators = serials.filter((s) => s.startsWith("emulator-"));
+  let devices = serials.filter((s) => !s.startsWith("emulator-"));
 
-if [ "${#targets[@]}" -eq 0 ]; then
-  echo "No reachable Android emulator or physical device" >&2
-  exit 1
-fi
+  // Optional handset pin (ignored for emulators).
+  const pinned =
+    process.env.SRCTHREAD_ANDROID_SERIAL?.trim() ||
+    process.env.ANDROID_SERIAL?.trim() ||
+    "";
+  if (pinned) {
+    devices = devices.filter((s) => s === pinned);
+  }
 
-echo "Targets: ${targets[*]}"
-./gradlew :apps:android:assembleDebug
+  const targets: string[] = [];
+  if (wantEmulator) {
+    if (emulators.length === 0) {
+      if (!infer) {
+        console.error("No reachable Android emulator (adb status=device)");
+        return 1;
+      }
+    } else {
+      targets.push(...emulators);
+    }
+  }
+  if (wantDevice) {
+    if (devices.length === 0) {
+      if (!infer) {
+        if (pinned) {
+          console.error(
+            `Pinned device ${pinned} is not reachable (adb status=device)`,
+          );
+        } else {
+          console.error(
+            "No reachable physical Android device (adb status=device)",
+          );
+        }
+        return 1;
+      }
+    } else {
+      targets.push(...devices);
+    }
+  }
 
-for serial in "${targets[@]}"; do
-  echo "Installing on $serial"
-  android install --device="$serial" --apks "$apk" "${install_opts[@]+"${install_opts[@]}"}"
-  adb -s "$serial" shell am start -n "$activity"
-done
+  if (targets.length === 0) {
+    console.error("No reachable Android emulator or physical device");
+    return 1;
+  }
+
+  console.log(`Targets: ${targets.join(" ")}`);
+  await Bun.$`./gradlew :apps:android:assembleDebug`.cwd(mise.projectRoot);
+
+  for (const serial of targets) {
+    console.log(`Installing on ${serial}`);
+    if (command.force) {
+      await Bun.$`android install --device=${serial} --apks ${APK} --install-options=-d`.cwd(
+        mise.projectRoot,
+      );
+    } else {
+      await Bun.$`android install --device=${serial} --apks ${APK}`.cwd(
+        mise.projectRoot,
+      );
+    }
+    await Bun.$`adb -s ${serial} shell am start -n ${ACTIVITY}`.cwd(
+      mise.projectRoot,
+    );
+  }
+
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exit(await main(parseCommand(), resolveMiseEnv()));
+}

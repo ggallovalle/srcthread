@@ -24,9 +24,8 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "~/*": [
-        "./tasks-lib/*"
-      ]
+      "~/*": ["./tasks-lib/*"]
     }
-  }
+  },
+  "include": ["tasks-lib/**/*.ts"]
 }

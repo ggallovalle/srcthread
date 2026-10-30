@@ -1,197 +1,291 @@
-#!/usr/bin/env bash
-#MISE description="Cut a GitHub release (tarballs, APK, checksums, packslip-sign)"
-#USAGE arg "<version>" help="Semver to publish (must match Cargo.toml)"
-#USAGE flag "--dry-run" help="Build artifacts only; no tag, gh release, or packslip"
-#USAGE flag "--skip-android" help="Skip Android APK"
-#USAGE flag "--skip-desktop" help="Skip desktop variant tarball"
-#USAGE flag "--host-only" help="Only build the current rustc host triple"
-#
-# Env:
-#   HOST_TRIPLE    Override rustc host triple for --host-only builds.
-set -euo pipefail
+#!/usr/bin/env bun
+// vim: set ft=typescript:
+//MISE description="Cut a GitHub release (tarballs, APK, checksums, packslip-sign)"
+//USAGE arg "<version>" help="Semver to publish (must match Cargo.toml)"
+//USAGE flag "--dry-run" help="Build artifacts only; no tag, gh release, or packslip"
+//USAGE flag "--skip-android" help="Skip Android APK"
+//USAGE flag "--skip-desktop" help="Skip desktop variant tarball"
+//USAGE flag "--host-only" help="Only build the current rustc host triple"
+/**
+ * Env:
+ *   HOST_TRIPLE    Override rustc host triple for --host-only builds.
+ */
 
-ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
-cd "$ROOT"
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
+import { rustcHostTriple } from "~/rust.ts";
+import { readCliVersion } from "~/version.ts";
 
-VERSION="${usage_version?}"
-DRY_RUN=0
-SKIP_ANDROID=0
-SKIP_DESKTOP=0
-HOST_ONLY=0
-[[ "${usage_dry_run:-false}" == "true" ]] && DRY_RUN=1
-[[ "${usage_skip_android:-false}" == "true" ]] && SKIP_ANDROID=1
-[[ "${usage_skip_desktop:-false}" == "true" ]] && SKIP_DESKTOP=1
-[[ "${usage_host_only:-false}" == "true" ]] && HOST_ONLY=1
+const SEMVER_RE = /^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$/;
 
-if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
-	echo "version must look like semver (got: $VERSION)" >&2
-	exit 1
-fi
+const PLATFORM_TRIPLES = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+] as const;
 
-TAG="v${VERSION}"
-NOTES_FILE="release-notes/${VERSION}.md"
-HOST_TRIPLE="${HOST_TRIPLE:-$(rustc -vV | awk '/^host:/{print $2}')}"
+/** Mirrors //USAGE above. */
+export type Command = {
+  version: string;
+  dryRun: boolean;
+  skipAndroid: boolean;
+  skipDesktop: boolean;
+  hostOnly: boolean;
+};
 
-echo "==> publish $TAG (dry_run=$DRY_RUN host_only=$HOST_ONLY)"
-
-if [[ ! -f "$NOTES_FILE" ]]; then
-	echo "missing release notes: $NOTES_FILE" >&2
-	echo "Write GitHub release notes there before publishing." >&2
-	exit 1
-fi
-if [[ ! -s "$NOTES_FILE" ]]; then
-	echo "release notes file is empty: $NOTES_FILE" >&2
-	exit 1
-fi
-
-if [[ "$DRY_RUN" -eq 0 ]]; then
-	if [[ -n "$(git status --porcelain)" ]]; then
-		echo "working tree is dirty; commit or stash first" >&2
-		exit 1
-	fi
-	command -v gh >/dev/null || {
-		echo "gh is required" >&2
-		exit 1
-	}
-	gh auth status >/dev/null
-fi
-
-pkg_version="$(bun "$ROOT/mise/tasks/release/cli-version")"
-if [[ "$pkg_version" != "$VERSION" ]]; then
-	echo "Cargo.toml version is $pkg_version but publish asked for $VERSION" >&2
-	echo "bump with: mise run release:bump <version>" >&2
-	exit 1
-fi
-
-rm -rf dist
-mkdir -p dist
-
-echo "==> release assets (usage, completions, man)"
-mise run render:usage --dist
-
-build_one() {
-	local triple="$1" variant="$2"
-	mise run release:tarball "$triple" "$variant"
+export function parseCommand(
+  env: NodeJS.ProcessEnv = process.env,
+): Command | { error: string } {
+  const version = env.usage_version?.trim();
+  if (!version) {
+    return { error: "missing required arg <version> (usage_version)" };
+  }
+  return {
+    version,
+    dryRun: env.usage_dry_run === "true",
+    skipAndroid: env.usage_skip_android === "true",
+    skipDesktop: env.usage_skip_desktop === "true",
+    hostOnly: env.usage_host_only === "true",
+  };
 }
 
-if [[ "$HOST_ONLY" -eq 1 ]]; then
-	echo "==> host-only tarball ($HOST_TRIPLE)"
-	build_one "$HOST_TRIPLE" default
-	if [[ "$SKIP_DESKTOP" -eq 0 ]]; then
-		build_one "$HOST_TRIPLE" desktop || {
-			echo "warning: desktop variant build failed; continuing without it" >&2
-		}
-	fi
-else
-	echo "==> platform tarballs"
-	triples=(
-		x86_64-unknown-linux-gnu
-		aarch64-unknown-linux-gnu
-		x86_64-apple-darwin
-		aarch64-apple-darwin
-	)
-	for triple in "${triples[@]}"; do
-		# Skip foreign triples that cannot build on this host without cross.
-		case "$triple" in
-		"$HOST_TRIPLE") ;;
-		*-apple-darwin)
-			[[ "$(uname -s)" == Darwin ]] || {
-				echo "skip $triple (not on macOS)"
-				continue
-			}
-			;;
-		*-linux-gnu)
-			[[ "$(uname -s)" == Linux ]] || {
-				echo "skip $triple (not on Linux)"
-				continue
-			}
-			# Cross-arch Linux needs a toolchain; skip if rustup target missing.
-			if ! rustup target list --installed 2>/dev/null | grep -qx "$triple"; then
-				echo "skip $triple (rustup target not installed)"
-				continue
-			fi
-			;;
-		esac
-		build_one "$triple" default
-		if [[ "$SKIP_DESKTOP" -eq 0 ]]; then
-			build_one "$triple" desktop || echo "warning: desktop build failed for $triple" >&2
-		fi
-	done
-fi
+async function buildOne(
+  root: string,
+  triple: string,
+  variant: "default" | "desktop",
+): Promise<number> {
+  const result =
+    await Bun.$`mise run release:tarball ${triple} ${variant}`.cwd(root).nothrow();
+  return result.exitCode;
+}
 
-if [[ "$SKIP_ANDROID" -eq 0 ]]; then
-	echo "==> Android release APK"
-	if [[ -z "${ANDROID_HOME:-}${ANDROID_SDK_ROOT:-}" ]]; then
-		echo "ANDROID_HOME/ANDROID_SDK_ROOT unset; skip APK (pass --skip-android to silence)" >&2
-	else
-		./gradlew :apps:android:assembleRelease
-		apk="$(find apps/android/build/outputs/apk/release -name '*.apk' | head -1)"
-		if [[ -z "$apk" ]]; then
-			echo "assembleRelease produced no APK" >&2
-			exit 1
-		fi
-		cp -f "$apk" "dist/srcthread-${VERSION}-android.apk"
-		ls -lh "dist/srcthread-${VERSION}-android.apk"
-	fi
-fi
+/** null = build; otherwise a skip log line. */
+async function skipTripleReason(
+  root: string,
+  triple: string,
+  hostTriple: string,
+): Promise<string | null> {
+  if (triple === hostTriple) return null;
+  if (triple.endsWith("-apple-darwin")) {
+    return process.platform === "darwin"
+      ? null
+      : `skip ${triple} (not on macOS)`;
+  }
+  if (triple.endsWith("-linux-gnu")) {
+    if (process.platform !== "linux") return `skip ${triple} (not on Linux)`;
+    const installed =
+      await Bun.$`rustup target list --installed`.cwd(root).nothrow().text();
+    const ok = installed
+      .split("\n")
+      .map((l) => l.trim())
+      .includes(triple);
+    return ok ? null : `skip ${triple} (rustup target not installed)`;
+  }
+  return null;
+}
 
-mise run release:checksums
+export async function main(command: Command, mise: MiseEnv): Promise<number> {
+  const root = mise.projectRoot;
+  const { version } = command;
+  if (!SEMVER_RE.test(version)) {
+    console.error(`version must look like semver (got: ${version})`);
+    return 1;
+  }
 
-# Never ship a key-signed packslip from this script — mise consumers of a
-# github.com project expect keyless OIDC. Sign after the release exists:
-#   gh workflow run packslip-sign.yml -f tag=v<version>
-rm -f dist/packslip.sigstore.json
+  const tag = `v${version}`;
+  const notesFile = join(root, "release-notes", `${version}.md`);
+  const hostOverride = process.env.HOST_TRIPLE?.trim();
+  let hostTriple = hostOverride || "";
+  if (!hostTriple) {
+    const host = await rustcHostTriple(root);
+    if (typeof host !== "string") {
+      console.error(host.error);
+      return 1;
+    }
+    hostTriple = host;
+  }
 
-if [[ "$DRY_RUN" -eq 1 ]]; then
-	echo "==> dry-run complete; artifacts in dist/"
-	echo "    (packslip is keyless via packslip-sign.yml after a real publish)"
-	ls -lh dist/
-	exit 0
-fi
+  console.log(
+    `==> publish ${tag} (dry_run=${command.dryRun} host_only=${command.hostOnly})`,
+  );
 
-echo "==> tag $TAG"
-if git rev-parse "$TAG" >/dev/null 2>&1; then
-	echo "tag $TAG already exists" >&2
-	exit 1
-fi
-git tag -a "$TAG" -m "$TAG"
-git push origin "refs/tags/$TAG"
+  const notes = Bun.file(notesFile);
+  if (!(await notes.exists())) {
+    console.error(`missing release notes: ${notesFile}`);
+    console.error("Write GitHub release notes there before publishing.");
+    return 1;
+  }
+  if ((await notes.text()).trim().length === 0) {
+    console.error(`release notes file is empty: ${notesFile}`);
+    return 1;
+  }
 
-echo "==> GitHub release"
-shopt -s nullglob
-assets=(dist/*)
-gh release create "$TAG" "${assets[@]}" \
-	--title "$TAG" \
-	--notes-file "$NOTES_FILE" \
-	--verify-tag
+  if (!command.dryRun) {
+    const dirty = await Bun.$`git status --porcelain`.cwd(root).text();
+    if (dirty.trim()) {
+      console.error("working tree is dirty; commit or stash first");
+      return 1;
+    }
+    const gh = await Bun.$`command -v gh`.nothrow().quiet();
+    if (gh.exitCode !== 0) {
+      console.error("gh is required");
+      return 1;
+    }
+    await Bun.$`gh auth status`.cwd(root).quiet();
+  }
 
-echo "==> packslip-sign (keyless CI)"
-# Workflow file must already be on the default branch.
-gh workflow run packslip-sign.yml -f "tag=${TAG}"
-# Wait for the run we just kicked off (newest run of this workflow).
-sleep 3
-run_id="$(
-	gh run list --workflow=packslip-sign.yml --limit 1 --json databaseId --jq '.[0].databaseId'
-)"
-if [[ -z "$run_id" || "$run_id" == "null" ]]; then
-	echo "could not find packslip-sign run; check Actions tab" >&2
-	exit 1
-fi
-echo "watching run $run_id"
-gh run watch "$run_id" --exit-status
+  const pkgVersion = await readCliVersion(root);
+  if (typeof pkgVersion !== "string") {
+    console.error(pkgVersion.error);
+    return 1;
+  }
+  if (pkgVersion !== version) {
+    console.error(
+      `Cargo.toml version is ${pkgVersion} but publish asked for ${version}`,
+    );
+    console.error("bump with: mise run release:bump <version>");
+    return 1;
+  }
 
-cat <<EOF
+  await rm(join(root, "dist"), { recursive: true, force: true });
+  await mkdir(join(root, "dist"), { recursive: true });
 
-Published $TAG with keyless packslip.
+  console.log("==> release assets (usage, completions, man)");
+  await Bun.$`mise run render:usage --dist`.cwd(root);
+
+  if (command.hostOnly) {
+    console.log(`==> host-only tarball (${hostTriple})`);
+    if ((await buildOne(root, hostTriple, "default")) !== 0) return 1;
+    if (!command.skipDesktop) {
+      if ((await buildOne(root, hostTriple, "desktop")) !== 0) {
+        console.error(
+          "warning: desktop variant build failed; continuing without it",
+        );
+      }
+    }
+  } else {
+    console.log("==> platform tarballs");
+    for (const triple of PLATFORM_TRIPLES) {
+      const skip = await skipTripleReason(root, triple, hostTriple);
+      if (skip) {
+        console.log(skip);
+        continue;
+      }
+      if ((await buildOne(root, triple, "default")) !== 0) return 1;
+      if (!command.skipDesktop) {
+        if ((await buildOne(root, triple, "desktop")) !== 0) {
+          console.error(`warning: desktop build failed for ${triple}`);
+        }
+      }
+    }
+  }
+
+  if (!command.skipAndroid) {
+    console.log("==> Android release APK");
+    if (!process.env.ANDROID_HOME && !process.env.ANDROID_SDK_ROOT) {
+      console.error(
+        "ANDROID_HOME/ANDROID_SDK_ROOT unset; skip APK (pass --skip-android to silence)",
+      );
+    } else {
+      await Bun.$`./gradlew :apps:android:assembleRelease`.cwd(root);
+      const apkDir = join(
+        root,
+        "apps/android/build/outputs/apk/release",
+      );
+      let apk: string | null = null;
+      for await (const match of new Bun.Glob("*.apk").scan({
+        cwd: apkDir,
+        onlyFiles: true,
+      })) {
+        apk = join(apkDir, match);
+        break;
+      }
+      if (!apk) {
+        console.error("assembleRelease produced no APK");
+        return 1;
+      }
+      const dest = join(root, "dist", `srcthread-${version}-android.apk`);
+      await Bun.write(dest, Bun.file(apk));
+      await Bun.$`ls -lh ${dest}`.cwd(root);
+    }
+  }
+
+  await Bun.$`mise run release:checksums`.cwd(root);
+
+  // Never ship a key-signed packslip from this script — mise consumers of a
+  // github.com project expect keyless OIDC. Sign after the release exists:
+  //   gh workflow run packslip-sign.yml -f tag=v<version>
+  await rm(join(root, "dist", "packslip.sigstore.json"), { force: true });
+
+  if (command.dryRun) {
+    console.log("==> dry-run complete; artifacts in dist/");
+    console.log(
+      "    (packslip is keyless via packslip-sign.yml after a real publish)",
+    );
+    await Bun.$`ls -lh dist/`.cwd(root);
+    return 0;
+  }
+
+  console.log(`==> tag ${tag}`);
+  const tagExists = await Bun.$`git rev-parse ${tag}`.cwd(root).nothrow().quiet();
+  if (tagExists.exitCode === 0) {
+    console.error(`tag ${tag} already exists`);
+    return 1;
+  }
+  await Bun.$`git tag -a ${tag} -m ${tag}`.cwd(root);
+  await Bun.$`git push origin refs/tags/${tag}`.cwd(root);
+
+  console.log("==> GitHub release");
+  const assets: string[] = [];
+  for await (const match of new Bun.Glob("*").scan({
+    cwd: join(root, "dist"),
+    onlyFiles: true,
+  })) {
+    assets.push(join(root, "dist", match));
+  }
+  await Bun.$`gh release create ${tag} ${assets} --title ${tag} --notes-file ${notesFile} --verify-tag`.cwd(
+    root,
+  );
+
+  console.log("==> packslip-sign (keyless CI)");
+  await Bun.$`gh workflow run packslip-sign.yml -f tag=${tag}`.cwd(root);
+  await Bun.sleep(3000);
+  const runId = (
+    await Bun.$`gh run list --workflow=packslip-sign.yml --limit 1 --json databaseId --jq .[0].databaseId`
+      .cwd(root)
+      .text()
+  ).trim();
+  if (!runId || runId === "null") {
+    console.error("could not find packslip-sign run; check Actions tab");
+    return 1;
+  }
+  console.log(`watching run ${runId}`);
+  await Bun.$`gh run watch ${runId} --exit-status`.cwd(root);
+
+  console.log(`
+Published ${tag} with keyless packslip.
 
 Install (PC):
 
   [tools]
-  "packslip:github.com/ggallovalle/srcthread" = { version = "${VERSION}", variant = "desktop" }
+  "packslip:github.com/ggallovalle/srcthread" = { version = "${version}", variant = "desktop" }
 
 Optional postinstall:
 
   postinstall = "srcthread integration install cursor --user && srcthread desktop install-xdg"
 
-Android: download srcthread-${VERSION}-android.apk from the release.
-EOF
+Android: download srcthread-${version}-android.apk from the release.
+`);
+  return 0;
+}
+
+if (import.meta.main) {
+  const parsed = parseCommand();
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    process.exit(2);
+  }
+  process.exit(await main(parsed, resolveMiseEnv()));
+}

@@ -1,35 +1,78 @@
-#!/usr/bin/env bash
-#MISE description="Regenerate usage KDL, completions, and man page"
-#USAGE flag "--dist" help="Also copy flat assets into dist/ for GitHub releases"
-#
-# Writes:
-#   srcthread.usage.kdl
-#   completion/srcthread.{bash,fish,ps1} and completion/_srcthread
-#   man/man1/srcthread.1
-set -euo pipefail
+#!/usr/bin/env bun
+// vim: set ft=typescript:
+//MISE description="Regenerate usage KDL, completions, and man page"
+//USAGE flag "--dist" help="Also copy flat assets into dist/ for GitHub releases"
+/**
+ * Writes:
+ *   srcthread.usage.kdl
+ *   completion/srcthread.{bash,fish,ps1} and completion/_srcthread
+ *   man/man1/srcthread.1
+ */
 
-ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
-cd "$ROOT"
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
 
+/** Mirrors //USAGE above. */
+export type Command = {
+  dist: boolean;
+};
 
-mkdir -p completion man/man1
+export function parseCommand(
+  env: NodeJS.ProcessEnv = process.env,
+): Command {
+  return { dist: env.usage_dist === "true" };
+}
 
-# Same CLI surface as CI (no Wayland/Vulkan link deps).
-cargo run -qp srcthread-cli --no-default-features -- __usage_spec__ >srcthread.usage.kdl
+export async function main(command: Command, mise: MiseEnv): Promise<number> {
+  const root = mise.projectRoot;
+  await mkdir(join(root, "completion"), { recursive: true });
+  await mkdir(join(root, "man", "man1"), { recursive: true });
 
-usage generate completion bash srcthread -f srcthread.usage.kdl >completion/srcthread.bash
-usage generate completion zsh srcthread -f srcthread.usage.kdl >completion/_srcthread
-usage generate completion fish srcthread -f srcthread.usage.kdl >completion/srcthread.fish
-usage generate completion powershell srcthread -f srcthread.usage.kdl >completion/srcthread.ps1
+  // Same CLI surface as CI (no Wayland/Vulkan link deps).
+  const kdl =
+    await Bun.$`cargo run -qp srcthread-cli --no-default-features -- __usage_spec__`
+      .cwd(root)
+      .text();
+  await Bun.write(join(root, "srcthread.usage.kdl"), kdl);
 
-usage generate manpage -f srcthread.usage.kdl -o man/man1/srcthread.1
+  const shells = [
+    ["bash", "completion/srcthread.bash"],
+    ["zsh", "completion/_srcthread"],
+    ["fish", "completion/srcthread.fish"],
+    ["powershell", "completion/srcthread.ps1"],
+  ] as const;
 
-if [[ "${usage_dist:-false}" == "true" ]]; then
-	mkdir -p dist
-	cp -f srcthread.usage.kdl dist/srcthread.usage.kdl
-	cp -f completion/srcthread.bash dist/srcthread.bash
-	cp -f completion/_srcthread dist/srcthread.zsh
-	cp -f completion/srcthread.fish dist/srcthread.fish
-	cp -f completion/srcthread.ps1 dist/srcthread.powershell
-	echo "Staged release assets under dist/"
-fi
+  for (const [shell, out] of shells) {
+    const text =
+      await Bun.$`usage generate completion ${shell} srcthread -f srcthread.usage.kdl`
+        .cwd(root)
+        .text();
+    await Bun.write(join(root, out), text);
+  }
+
+  await Bun.$`usage generate manpage -f srcthread.usage.kdl -o man/man1/srcthread.1`.cwd(
+    root,
+  );
+
+  if (command.dist) {
+    await mkdir(join(root, "dist"), { recursive: true });
+    const copies: Array<[string, string]> = [
+      ["srcthread.usage.kdl", "dist/srcthread.usage.kdl"],
+      ["completion/srcthread.bash", "dist/srcthread.bash"],
+      ["completion/_srcthread", "dist/srcthread.zsh"],
+      ["completion/srcthread.fish", "dist/srcthread.fish"],
+      ["completion/srcthread.ps1", "dist/srcthread.powershell"],
+    ];
+    for (const [from, to] of copies) {
+      await Bun.write(join(root, to), Bun.file(join(root, from)));
+    }
+    console.log("Staged release assets under dist/");
+  }
+
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exit(await main(parseCommand(), resolveMiseEnv()));
+}

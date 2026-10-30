@@ -1,24 +1,61 @@
-#!/usr/bin/env bash
-#MISE description="Write SHASUMS256.txt for staged release artifacts"
-#USAGE arg "[dist-dir]" help="Directory of release artifacts (default: dist/)"
-set -euo pipefail
+#!/usr/bin/env bun
+// vim: set ft=typescript:
+//MISE description="Write SHASUMS256.txt for staged release artifacts"
+//USAGE arg "[dist-dir]" help="Directory of release artifacts (default: dist/)"
 
-ROOT="${MISE_PROJECT_ROOT:-${MISE_CONFIG_ROOT:-$PWD}}"
-DIST="${usage_dist_dir:-$ROOT/dist}"
+import { join } from "node:path";
+import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
 
-if [[ ! -d "$DIST" ]]; then
-	echo "dist directory not found: $DIST" >&2
-	exit 1
-fi
+/** Mirrors //USAGE above. */
+export type Command = {
+  distDir: string | null;
+};
 
-cd "$DIST"
-# Stable order; skip the checksum file itself if re-run.
-mapfile -t files < <(find . -maxdepth 1 -type f ! -name 'SHASUMS256.txt' | sed 's|^\./||' | sort)
-if [[ ${#files[@]} -eq 0 ]]; then
-	echo "no artifacts in $DIST" >&2
-	exit 1
-fi
+export function parseCommand(
+  env: NodeJS.ProcessEnv = process.env,
+): Command {
+  const raw = env.usage_dist_dir?.trim();
+  return { distDir: raw || null };
+}
 
-sha256sum -- "${files[@]}" >SHASUMS256.txt
-echo "Wrote $DIST/SHASUMS256.txt (${#files[@]} files)"
-cat SHASUMS256.txt
+export async function main(command: Command, mise: MiseEnv): Promise<number> {
+  const dist = command.distDir || join(mise.projectRoot, "dist");
+  const distOk = await Bun.$`test -d ${dist}`.nothrow().quiet();
+  if (distOk.exitCode !== 0) {
+    console.error(`dist directory not found: ${dist}`);
+    return 1;
+  }
+
+  const names: string[] = [];
+  for await (const match of new Bun.Glob("*").scan({
+    cwd: dist,
+    onlyFiles: true,
+  })) {
+    if (match === "SHASUMS256.txt") continue;
+    names.push(match);
+  }
+  names.sort();
+
+  if (names.length === 0) {
+    console.error(`no artifacts in ${dist}`);
+    return 1;
+  }
+
+  const lines: string[] = [];
+  for (const name of names) {
+    const path = join(dist, name);
+    const hasher = new Bun.CryptoHasher("sha256");
+    hasher.update(await Bun.file(path).arrayBuffer());
+    // GNU sha256sum: "<hex>  <name>"
+    lines.push(`${hasher.digest("hex")}  ${name}`);
+  }
+  const body = `${lines.join("\n")}\n`;
+  await Bun.write(join(dist, "SHASUMS256.txt"), body);
+  console.log(`Wrote ${dist}/SHASUMS256.txt (${names.length} files)`);
+  console.log(body.trimEnd());
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exit(await main(parseCommand(), resolveMiseEnv()));
+}

@@ -1,16 +1,42 @@
-#!/usr/bin/env bash
-#MISE description="Run Android detekt (ktlint wrapper) via Gradle"
-#MISE dir="{{config_root}}"
-set -euo pipefail
+#!/usr/bin/env bun
+// vim: set ft=typescript:
+//MISE description="Run Android detekt (ktlint wrapper) via Gradle"
+//MISE dir="{{config_root}}"
 
-# CI is Rust-only; GHA may set ANDROID_HOME to a partial SDK that breaks Gradle.
-if [ "${CI:-}" = "true" ]; then
-  echo "skip detekt (CI)"
-  exit 0
-fi
-sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-if [ -z "$sdk" ] || [ ! -d "$sdk/platforms" ]; then
-  echo "skip detekt (no usable Android SDK)"
-  exit 0
-fi
-./gradlew :apps:android:detekt :ktpackages:srcthread:detekt
+import { join } from "node:path";
+import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
+
+export type Command = Record<string, never>;
+
+export function parseCommand(
+  _env: NodeJS.ProcessEnv = process.env,
+): Command {
+  return {};
+}
+
+export async function main(_command: Command, mise: MiseEnv): Promise<number> {
+  // CI is Rust-only; GHA may set ANDROID_HOME to a partial SDK that breaks Gradle.
+  if (process.env.CI === "true") {
+    console.log("skip detekt (CI)");
+    return 0;
+  }
+
+  const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || "";
+  const platforms = join(sdk, "platforms");
+  const platformsOk = sdk
+    ? await Bun.$`test -d ${platforms}`.nothrow().quiet()
+    : { exitCode: 1 };
+  if (!sdk || platformsOk.exitCode !== 0) {
+    console.log("skip detekt (no usable Android SDK)");
+    return 0;
+  }
+
+  await Bun.$`./gradlew :apps:android:detekt :ktpackages:srcthread:detekt`.cwd(
+    mise.projectRoot,
+  );
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exit(await main(parseCommand(), resolveMiseEnv()));
+}
