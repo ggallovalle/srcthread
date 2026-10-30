@@ -56,8 +56,7 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
 	gh auth status >/dev/null
 fi
 
-pkg_version="$(cargo metadata --no-deps --format-version 1 |
-	bun -e 'const d=await Bun.stdin.json(); console.log(d.packages.find(p=>p.name==="srcthread-cli").version)')"
+pkg_version="$(bun "$ROOT/mise/tasks/release/cli-version")"
 if [[ "$pkg_version" != "$VERSION" ]]; then
 	echo "Cargo.toml version is $pkg_version but publish asked for $VERSION" >&2
 	echo "bump with: mise run release:bump <version>" >&2

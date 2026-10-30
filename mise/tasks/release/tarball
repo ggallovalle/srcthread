@@ -40,8 +40,7 @@ get_arch() {
 
 os="$(get_os)"
 arch="$(get_arch)"
-version="$(cargo metadata --no-deps --format-version 1 |
-	bun -e 'const d=await Bun.stdin.json(); console.log(d.packages.find(p=>p.name==="srcthread-cli").version)')"
+version="$(bun "$ROOT/mise/tasks/release/cli-version")"
 
 case "$VARIANT" in
 default)

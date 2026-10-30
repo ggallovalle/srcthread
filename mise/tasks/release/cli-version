@@ -1,0 +1,84 @@
+#!/usr/bin/env bun
+//MISE description="Print the lockstep product version (workspace / srcthread-cli)"
+/**
+ * Prints the current product version to stdout.
+ *
+ * Prefer: mise run release:cli-version
+ * From shell tasks: bun "$MISE_PROJECT_ROOT/mise/tasks/release/cli-version"
+ */
+
+import { join } from "node:path";
+
+export type MiseEnv = {
+  projectRoot: string;
+  taskFile: string;
+  taskDir: string;
+  originalCwd: string;
+};
+
+export function resolveMiseEnv(env: NodeJS.ProcessEnv = process.env): MiseEnv {
+  const projectRoot =
+    env.MISE_PROJECT_ROOT?.trim() ||
+    env.MISE_CONFIG_ROOT?.trim() ||
+    join(import.meta.dir, "..", "..");
+  return {
+    projectRoot,
+    taskFile: env.MISE_TASK_FILE?.trim() || import.meta.path,
+    taskDir: env.MISE_TASK_DIR?.trim() || import.meta.dir,
+    originalCwd: env.MISE_ORIGINAL_CWD?.trim() || process.cwd(),
+  };
+}
+
+type CargoToml = {
+  workspace?: { package?: { version?: string } };
+};
+
+/** Read [workspace.package].version from Cargo.toml. */
+export async function readWorkspaceVersion(
+  projectRoot: string,
+): Promise<string | { error: string }> {
+  const path = join(projectRoot, "Cargo.toml");
+  const file = Bun.file(path);
+  if (!(await file.exists())) return { error: `missing ${path}` };
+  const parsed = Bun.TOML.parse(await file.text()) as CargoToml;
+  const version = parsed.workspace?.package?.version?.trim();
+  if (!version) {
+    return { error: "could not find [workspace.package] version in Cargo.toml" };
+  }
+  return version;
+}
+
+/**
+ * Prefer cargo metadata for srcthread-cli (authoritative packaged version);
+ * fall back to workspace Cargo.toml when cargo is unavailable.
+ */
+export async function readCliVersion(
+  projectRoot: string,
+): Promise<string | { error: string }> {
+  try {
+    const meta = await Bun.$`cargo metadata --no-deps --format-version 1`
+      .cwd(projectRoot)
+      .json();
+    const pkg = (
+      meta as { packages: Array<{ name: string; version: string }> }
+    ).packages.find((p) => p.name === "srcthread-cli");
+    if (pkg?.version) return pkg.version;
+  } catch {
+    // fall through to Cargo.toml
+  }
+  return readWorkspaceVersion(projectRoot);
+}
+
+export async function main(_command: Record<string, never>, mise: MiseEnv): Promise<number> {
+  const version = await readCliVersion(mise.projectRoot);
+  if (typeof version !== "string") {
+    console.error(version.error);
+    return 1;
+  }
+  console.log(version);
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exit(await main({}, resolveMiseEnv()));
+}

@@ -7,33 +7,46 @@
  * Does not commit. Run before: mise run release:publish <version>
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import {
+  readWorkspaceVersion,
+  resolveMiseEnv,
+  type MiseEnv,
+} from "./cli-version";
 
-function projectRoot(): string {
-  for (const key of ["MISE_PROJECT_ROOT", "MISE_CONFIG_ROOT"] as const) {
-    const val = process.env[key];
-    if (val) return val;
-  }
-  return process.cwd();
-}
+/** Mirrors //USAGE above. */
+export type Command = {
+  target: string;
+};
 
-const ROOT = projectRoot();
-const CARGO_TOML = join(ROOT, "Cargo.toml");
-const ANDROID_GRADLE = join(ROOT, "apps", "android", "build.gradle.kts");
+export type { MiseEnv };
+
+export { resolveMiseEnv };
 
 const SEMVER_RE = /^([0-9]+)\.([0-9]+)\.([0-9]+)$/;
 const WORKSPACE_PACKAGE_RE = /^\[workspace\.package\][\s\S]*?(?=^\[|\Z)/m;
 const WORKSPACE_VERSION_RE = /^version\s*=\s*"([^"]*)"/m;
 
-function die(msg: string, code = 1): never {
-  console.error(msg);
-  process.exit(code);
+export function parseCommand(
+  env: NodeJS.ProcessEnv = process.env,
+): Command | { error: string } {
+  const target = env.usage_target?.trim();
+  if (!target) {
+    return {
+      error:
+        "missing required arg <target> (usage_target); expected X.Y.Z|patch|minor|major",
+    };
+  }
+  return { target };
 }
 
-function parseSemver(text: string): [number, number, number] {
+function parseSemver(
+  text: string,
+): [number, number, number] | { error: string } {
   const m = SEMVER_RE.exec(text);
-  if (!m) die(`version must be X.Y.Z digits (got ${JSON.stringify(text)})`);
+  if (!m) {
+    return { error: `version must be X.Y.Z digits (got ${JSON.stringify(text)})` };
+  }
   return [Number(m[1]), Number(m[2]), Number(m[3])];
 }
 
@@ -46,17 +59,13 @@ function versionCode(parts: [number, number, number]): number {
   return major * 10000 + minor * 100 + patch;
 }
 
-function readWorkspaceVersion(cargoToml: string): string {
-  const text = readFileSync(cargoToml, "utf8");
-  const block = WORKSPACE_PACKAGE_RE.exec(text);
-  if (!block) die("could not find [workspace.package] in Cargo.toml");
-  const m = WORKSPACE_VERSION_RE.exec(block[0]);
-  if (!m) die("could not find [workspace.package] version in Cargo.toml");
-  return m[1];
-}
-
-function bumpSemver(current: string, kind: string): string {
-  let [major, minor, patch] = parseSemver(current);
+function bumpSemver(
+  current: string,
+  kind: string,
+): string | { error: string } {
+  const parsed = parseSemver(current);
+  if ("error" in parsed) return parsed;
+  let [major, minor, patch] = parsed;
   if (kind === "major") {
     major += 1;
     minor = 0;
@@ -67,13 +76,17 @@ function bumpSemver(current: string, kind: string): string {
   } else if (kind === "patch") {
     patch += 1;
   } else {
-    die(`unknown bump kind: ${kind}`);
+    return { error: `unknown bump kind: ${kind}` };
   }
   return formatSemver([major, minor, patch]);
 }
 
-function writeWorkspaceVersion(cargoToml: string, version: string): void {
-  const text = readFileSync(cargoToml, "utf8");
+async function writeWorkspaceVersion(
+  cargoToml: string,
+  version: string,
+): Promise<string | null> {
+  const file = Bun.file(cargoToml);
+  const text = await file.text();
   let n = 0;
   const newText = text.replace(WORKSPACE_PACKAGE_RE, (block) => {
     n += 1;
@@ -85,16 +98,18 @@ function writeWorkspaceVersion(cargoToml: string, version: string): void {
       `$1version = "${version}"\n`,
     );
   });
-  if (n !== 1) die("failed to update [workspace.package] version");
-  writeFileSync(cargoToml, newText);
+  if (n !== 1) return "failed to update [workspace.package] version";
+  await Bun.write(cargoToml, newText);
+  return null;
 }
 
-function writeAndroidVersion(
+async function writeAndroidVersion(
   gradle: string,
   version: string,
   code: number,
-): void {
-  let text = readFileSync(gradle, "utf8");
+): Promise<string | null> {
+  const file = Bun.file(gradle);
+  let text = await file.text();
   let n1 = 0;
   let n2 = 0;
   text = text.replace(
@@ -112,46 +127,86 @@ function writeAndroidVersion(
     },
   );
   if (n1 !== 1 || n2 !== 1) {
-    die(
-      `failed to update Android version (versionName=${n1}, versionCode=${n2})`,
-    );
+    return `failed to update Android version (versionName=${n1}, versionCode=${n2})`;
   }
-  writeFileSync(gradle, text);
+  await Bun.write(gradle, text);
+  return null;
 }
 
-function main(): void {
-  let target = process.env.usage_target;
-  if (!target) {
-    if (process.argv.length > 2) {
-      target = process.argv[2];
-    } else {
-      die(
-        "missing target (run via: mise run release:bump <X.Y.Z|patch|minor|major>)",
-      );
-    }
+export async function main(command: Command, mise: MiseEnv): Promise<number> {
+  const cargoToml = join(mise.projectRoot, "Cargo.toml");
+  const androidGradle = join(
+    mise.projectRoot,
+    "apps",
+    "android",
+    "build.gradle.kts",
+  );
+
+  if (!(await Bun.file(cargoToml).exists())) {
+    console.error(`missing ${cargoToml}`);
+    return 1;
+  }
+  if (!(await Bun.file(androidGradle).exists())) {
+    console.error(`missing ${androidGradle}`);
+    return 1;
   }
 
-  if (!existsSync(CARGO_TOML)) die(`missing ${CARGO_TOML}`);
-  if (!existsSync(ANDROID_GRADLE)) die(`missing ${ANDROID_GRADLE}`);
+  const current = await readWorkspaceVersion(mise.projectRoot);
+  if (typeof current !== "string") {
+    console.error(current.error);
+    return 1;
+  }
 
-  const current = readWorkspaceVersion(CARGO_TOML);
   let version: string;
-  if (target === "patch" || target === "minor" || target === "major") {
-    version = bumpSemver(current, target);
+  if (
+    command.target === "patch" ||
+    command.target === "minor" ||
+    command.target === "major"
+  ) {
+    const bumped = bumpSemver(current, command.target);
+    if (typeof bumped !== "string") {
+      console.error(bumped.error);
+      return 1;
+    }
+    version = bumped;
   } else {
-    parseSemver(target); // validate
-    version = target;
+    const validated = parseSemver(command.target);
+    if ("error" in validated) {
+      console.error(validated.error);
+      return 1;
+    }
+    version = command.target;
   }
 
   const parts = parseSemver(version);
+  if ("error" in parts) {
+    console.error(parts.error);
+    return 1;
+  }
   const code = versionCode(parts);
 
-  writeWorkspaceVersion(CARGO_TOML, version);
-  writeAndroidVersion(ANDROID_GRADLE, version, code);
+  const cargoErr = await writeWorkspaceVersion(cargoToml, version);
+  if (cargoErr) {
+    console.error(cargoErr);
+    return 1;
+  }
+  const androidErr = await writeAndroidVersion(androidGradle, version, code);
+  if (androidErr) {
+    console.error(androidErr);
+    return 1;
+  }
 
   console.log(`bumped ${current} -> ${version} (Android versionCode=${code})`);
-  console.log(`  ${relative(ROOT, CARGO_TOML)}`);
-  console.log(`  ${relative(ROOT, ANDROID_GRADLE)}`);
+  console.log(`  ${relative(mise.projectRoot, cargoToml)}`);
+  console.log(`  ${relative(mise.projectRoot, androidGradle)}`);
+  return 0;
 }
 
-main();
+if (import.meta.main) {
+  const parsed = parseCommand();
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    process.exit(2);
+  }
+  process.exit(await main(parsed, resolveMiseEnv()));
+}
