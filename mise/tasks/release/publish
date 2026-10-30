@@ -57,7 +57,7 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
 fi
 
 pkg_version="$(cargo metadata --no-deps --format-version 1 |
-	python3 -c "import json,sys; d=json.load(sys.stdin); print([p['version'] for p in d['packages'] if p['name']=='srcthread-cli'][0])")"
+	bun -e 'const d=await Bun.stdin.json(); console.log(d.packages.find(p=>p.name==="srcthread-cli").version)')"
 if [[ "$pkg_version" != "$VERSION" ]]; then
 	echo "Cargo.toml version is $pkg_version but publish asked for $VERSION" >&2
 	echo "bump with: mise run release:bump <version>" >&2

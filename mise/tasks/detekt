@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Run Android detekt (ktlint wrapper) via Gradle"
+#MISE dir="{{config_root}}"
+set -euo pipefail
+
+# CI is Rust-only; GHA may set ANDROID_HOME to a partial SDK that breaks Gradle.
+if [ "${CI:-}" = "true" ]; then
+  echo "skip detekt (CI)"
+  exit 0
+fi
+sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [ -z "$sdk" ] || [ ! -d "$sdk/platforms" ]; then
+  echo "skip detekt (no usable Android SDK)"
+  exit 0
+fi
+./gradlew :apps:android:detekt :ktpackages:srcthread:detekt
