@@ -1,0 +1,17 @@
+{
+  "name": "mise-tasks",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "bun check"
+  },
+  "imports": {
+    "~/*": "./tasks-lib/*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// vim: set ft=typescript:
 //MISE description="Bump lockstep product version (Cargo workspace + Android)"
 //USAGE arg "<target>" help="X.Y.Z, or one of: patch, minor, major"
 /**
@@ -8,11 +9,13 @@
  */
 
 import { join, relative } from "node:path";
+import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
+import { bumpSemver, parseSemver, versionCode } from "~/semver.ts";
 import {
   readWorkspaceVersion,
-  resolveMiseEnv,
-  type MiseEnv,
-} from "./cli-version";
+  writeAndroidVersion,
+  writeWorkspaceVersion,
+} from "~/version.ts";
 
 /** Mirrors //USAGE above. */
 export type Command = {
@@ -22,10 +25,6 @@ export type Command = {
 export type { MiseEnv };
 
 export { resolveMiseEnv };
-
-const SEMVER_RE = /^([0-9]+)\.([0-9]+)\.([0-9]+)$/;
-const WORKSPACE_PACKAGE_RE = /^\[workspace\.package\][\s\S]*?(?=^\[|\Z)/m;
-const WORKSPACE_VERSION_RE = /^version\s*=\s*"([^"]*)"/m;
 
 export function parseCommand(
   env: NodeJS.ProcessEnv = process.env,
@@ -38,99 +37,6 @@ export function parseCommand(
     };
   }
   return { target };
-}
-
-function parseSemver(
-  text: string,
-): [number, number, number] | { error: string } {
-  const m = SEMVER_RE.exec(text);
-  if (!m) {
-    return { error: `version must be X.Y.Z digits (got ${JSON.stringify(text)})` };
-  }
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
-}
-
-function formatSemver(parts: [number, number, number]): string {
-  return `${parts[0]}.${parts[1]}.${parts[2]}`;
-}
-
-function versionCode(parts: [number, number, number]): number {
-  const [major, minor, patch] = parts;
-  return major * 10000 + minor * 100 + patch;
-}
-
-function bumpSemver(
-  current: string,
-  kind: string,
-): string | { error: string } {
-  const parsed = parseSemver(current);
-  if ("error" in parsed) return parsed;
-  let [major, minor, patch] = parsed;
-  if (kind === "major") {
-    major += 1;
-    minor = 0;
-    patch = 0;
-  } else if (kind === "minor") {
-    minor += 1;
-    patch = 0;
-  } else if (kind === "patch") {
-    patch += 1;
-  } else {
-    return { error: `unknown bump kind: ${kind}` };
-  }
-  return formatSemver([major, minor, patch]);
-}
-
-async function writeWorkspaceVersion(
-  cargoToml: string,
-  version: string,
-): Promise<string | null> {
-  const file = Bun.file(cargoToml);
-  const text = await file.text();
-  let n = 0;
-  const newText = text.replace(WORKSPACE_PACKAGE_RE, (block) => {
-    n += 1;
-    if (WORKSPACE_VERSION_RE.test(block)) {
-      return block.replace(WORKSPACE_VERSION_RE, `version = "${version}"`);
-    }
-    return block.replace(
-      /^(\[workspace\.package\]\n)/m,
-      `$1version = "${version}"\n`,
-    );
-  });
-  if (n !== 1) return "failed to update [workspace.package] version";
-  await Bun.write(cargoToml, newText);
-  return null;
-}
-
-async function writeAndroidVersion(
-  gradle: string,
-  version: string,
-  code: number,
-): Promise<string | null> {
-  const file = Bun.file(gradle);
-  let text = await file.text();
-  let n1 = 0;
-  let n2 = 0;
-  text = text.replace(
-    /^(\s*)versionName\s*=\s*"[^"]*"/m,
-    (_match, indent: string) => {
-      n1 += 1;
-      return `${indent}versionName = "${version}"`;
-    },
-  );
-  text = text.replace(
-    /^(\s*)versionCode\s*=\s*\d+/m,
-    (_match, indent: string) => {
-      n2 += 1;
-      return `${indent}versionCode = ${code}`;
-    },
-  );
-  if (n1 !== 1 || n2 !== 1) {
-    return `failed to update Android version (versionName=${n1}, versionCode=${n2})`;
-  }
-  await Bun.write(gradle, text);
-  return null;
 }
 
 export async function main(command: Command, mise: MiseEnv): Promise<number> {
@@ -185,12 +91,16 @@ export async function main(command: Command, mise: MiseEnv): Promise<number> {
   }
   const code = versionCode(parts);
 
-  const cargoErr = await writeWorkspaceVersion(cargoToml, version);
+  const cargoErr = await writeWorkspaceVersion(mise.projectRoot, version);
   if (cargoErr) {
     console.error(cargoErr);
     return 1;
   }
-  const androidErr = await writeAndroidVersion(androidGradle, version, code);
+  const androidErr = await writeAndroidVersion(
+    mise.projectRoot,
+    version,
+    code,
+  );
   if (androidErr) {
     console.error(androidErr);
     return 1;
