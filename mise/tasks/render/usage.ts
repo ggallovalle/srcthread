@@ -18,9 +18,7 @@ export type Command = {
   dist: boolean;
 };
 
-export function parseCommand(
-  env: NodeJS.ProcessEnv = process.env,
-): Command {
+export function parseCommand(env: NodeJS.ProcessEnv = process.env): Command {
   return { dist: env.usage_dist === "true" };
 }
 

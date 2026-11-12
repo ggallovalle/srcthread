@@ -2,9 +2,7 @@ const SEMVER_RE = /^([0-9]+)\.([0-9]+)\.([0-9]+)$/;
 
 export type SemverParts = [number, number, number];
 
-export function parseSemver(
-  text: string,
-): SemverParts | { error: string } {
+export function parseSemver(text: string): SemverParts | { error: string } {
   const m = SEMVER_RE.exec(text);
   if (!m) {
     return {

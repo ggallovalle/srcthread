@@ -96,11 +96,7 @@ export async function main(command: Command, mise: MiseEnv): Promise<number> {
     console.error(cargoErr);
     return 1;
   }
-  const androidErr = await writeAndroidVersion(
-    mise.projectRoot,
-    version,
-    code,
-  );
+  const androidErr = await writeAndroidVersion(mise.projectRoot, version, code);
   if (androidErr) {
     console.error(androidErr);
     return 1;

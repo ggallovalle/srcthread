@@ -11,9 +11,7 @@ export type Command = {
   distDir: string | null;
 };
 
-export function parseCommand(
-  env: NodeJS.ProcessEnv = process.env,
-): Command {
+export function parseCommand(env: NodeJS.ProcessEnv = process.env): Command {
   const raw = env.usage_dist_dir?.trim();
   return { distDir: raw || null };
 }

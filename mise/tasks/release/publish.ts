@@ -56,8 +56,9 @@ async function buildOne(
   triple: string,
   variant: "default" | "desktop",
 ): Promise<number> {
-  const result =
-    await Bun.$`mise run release:tarball ${triple} ${variant}`.cwd(root).nothrow();
+  const result = await Bun.$`mise run release:tarball ${triple} ${variant}`
+    .cwd(root)
+    .nothrow();
   return result.exitCode;
 }
 
@@ -75,8 +76,10 @@ async function skipTripleReason(
   }
   if (triple.endsWith("-linux-gnu")) {
     if (process.platform !== "linux") return `skip ${triple} (not on Linux)`;
-    const installed =
-      await Bun.$`rustup target list --installed`.cwd(root).nothrow().text();
+    const installed = await Bun.$`rustup target list --installed`
+      .cwd(root)
+      .nothrow()
+      .text();
     const ok = installed
       .split("\n")
       .map((l) => l.trim())
@@ -190,10 +193,7 @@ export async function main(command: Command, mise: MiseEnv): Promise<number> {
       );
     } else {
       await Bun.$`./gradlew :apps:android:assembleRelease`.cwd(root);
-      const apkDir = join(
-        root,
-        "apps/android/build/outputs/apk/release",
-      );
+      const apkDir = join(root, "apps/android/build/outputs/apk/release");
       let apk: string | null = null;
       for await (const match of new Bun.Glob("*.apk").scan({
         cwd: apkDir,
@@ -229,7 +229,10 @@ export async function main(command: Command, mise: MiseEnv): Promise<number> {
   }
 
   console.log(`==> tag ${tag}`);
-  const tagExists = await Bun.$`git rev-parse ${tag}`.cwd(root).nothrow().quiet();
+  const tagExists = await Bun.$`git rev-parse ${tag}`
+    .cwd(root)
+    .nothrow()
+    .quiet();
   if (tagExists.exitCode === 0) {
     console.error(`tag ${tag} already exists`);
     return 1;

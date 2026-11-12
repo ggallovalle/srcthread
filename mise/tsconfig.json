@@ -1,16 +1,12 @@
 {
   "compilerOptions": {
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-    "types": [
-      "bun"
-    ],
+    "types": ["bun"],
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -27,5 +23,5 @@
       "~/*": ["./tasks-lib/*"]
     }
   },
-  "include": ["tasks-lib/**/*.ts"]
+  "include": ["tasks/**/*.ts", "tasks-lib/**/*.ts"]
 }

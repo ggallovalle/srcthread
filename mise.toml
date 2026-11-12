@@ -58,7 +58,7 @@ run = "mise run check-ci"
 description = "Run the hk pre-commit hook (lint/format only)"
 run = "hk run pre-commit"
 
-# `render:usage` is a file task: mise/tasks/render/usage
+# `render:usage` is a file task: mise/tasks/render/usage.ts
 # (hk `render_usage` pre-commit step calls `mise run render:usage`).
 
 [tasks."render:schema"]
@@ -71,7 +71,7 @@ description = "Lint the in-repo srcthread/ dogfood store"
 dir = "{{config_root}}"
 run = "cargo run -qp srcthread-cli --no-default-features -- lint"
 
-# `detekt` is a file task: mise/tasks/detekt
+# `detekt` is a file task: mise/tasks/detekt.ts
 # (skipped in CI / when no usable Android SDK).
 
 [tasks."android-emulator"]
@@ -80,4 +80,4 @@ run = [
   "android emulator start ${SRCTHREAD_AVD:-Pixel_9_API_37.2}",
 ]
 
-# android-start lives in mise/tasks/android-start (file task with --emulator/--device).
+# android-start lives in mise/tasks/android-start.ts (file task with --emulator/--device).

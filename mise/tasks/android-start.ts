@@ -18,9 +18,7 @@ export type Command = {
   force: boolean;
 };
 
-export function parseCommand(
-  env: NodeJS.ProcessEnv = process.env,
-): Command {
+export function parseCommand(env: NodeJS.ProcessEnv = process.env): Command {
   return {
     emulator: env.usage_emulator === "true",
     device: env.usage_device === "true",

@@ -8,9 +8,7 @@ import { resolveMiseEnv, type MiseEnv } from "~/mise-env.ts";
 
 export type Command = Record<string, never>;
 
-export function parseCommand(
-  _env: NodeJS.ProcessEnv = process.env,
-): Command {
+export function parseCommand(_env: NodeJS.ProcessEnv = process.env): Command {
   return {};
 }
 
